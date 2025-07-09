@@ -25,6 +25,7 @@ import {
 
 export default function Settings() {
   const [settings, setSettings] = useState({
+    // OpenAI Settings
     openaiApiKey: "",
     model: "gpt-4o",
     temperature: 0.3,
@@ -33,7 +34,22 @@ export default function Settings() {
     enableSmartSearch: true,
     enableResponseDrafting: true,
     defaultResponseTone: "professional",
-    customInstructions: ""
+    customInstructions: "",
+    
+    // Demo Customization Settings
+    demoTitle: "AI Support Assistant",
+    companyName: "Demo Company",
+    demoDescription: "Intelligent support ticket management and automated response generation",
+    primaryColor: "#3B82F6",
+    accentColor: "#10B981",
+    warningColor: "#F59E0B",
+    demoMode: "full", // full, basic, advanced
+    showAdvancedFeatures: true,
+    customWelcomeMessage: "Welcome to your AI-powered support dashboard",
+    maxTicketsDisplay: 10,
+    enableDemoData: false,
+    demoUserName: "Demo User",
+    demoUserRole: "Support Manager"
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
@@ -375,6 +391,240 @@ export default function Settings() {
             <p className="text-sm text-gray-600">
               This is a demonstration application. Do not use real sensitive data in production environments.
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Demo Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
+            <Zap className="h-5 w-5 mr-2" />
+            Demo Customization
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="demoTitle">Demo Title</Label>
+              <Input
+                id="demoTitle"
+                placeholder="AI Support Assistant"
+                value={settings.demoTitle}
+                onChange={(e) => setSettings(prev => ({ ...prev, demoTitle: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                placeholder="Demo Company"
+                value={settings.companyName}
+                onChange={(e) => setSettings(prev => ({ ...prev, companyName: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="demoDescription">Demo Description</Label>
+            <Textarea
+              id="demoDescription"
+              placeholder="Intelligent support ticket management and automated response generation"
+              value={settings.demoDescription}
+              onChange={(e) => setSettings(prev => ({ ...prev, demoDescription: e.target.value }))}
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="welcomeMessage">Custom Welcome Message</Label>
+            <Textarea
+              id="welcomeMessage"
+              placeholder="Welcome to your AI-powered support dashboard"
+              value={settings.customWelcomeMessage}
+              onChange={(e) => setSettings(prev => ({ ...prev, customWelcomeMessage: e.target.value }))}
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="demoUserName">Demo User Name</Label>
+              <Input
+                id="demoUserName"
+                placeholder="Demo User"
+                value={settings.demoUserName}
+                onChange={(e) => setSettings(prev => ({ ...prev, demoUserName: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="demoUserRole">Demo User Role</Label>
+              <Input
+                id="demoUserRole"
+                placeholder="Support Manager"
+                value={settings.demoUserRole}
+                onChange={(e) => setSettings(prev => ({ ...prev, demoUserRole: e.target.value }))}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Demo Mode & Features */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
+            <Settings className="h-5 w-5 mr-2" />
+            Demo Mode & Features
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="demoMode">Demo Mode</Label>
+            <Select 
+              value={settings.demoMode} 
+              onValueChange={(value) => setSettings(prev => ({ ...prev, demoMode: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select demo mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic (Essential Features)</SelectItem>
+                <SelectItem value="full">Full (All Features)</SelectItem>
+                <SelectItem value="advanced">Advanced (Expert Mode)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxTicketsDisplay">Maximum Tickets to Display</Label>
+            <Input
+              id="maxTicketsDisplay"
+              type="number"
+              min="1"
+              max="50"
+              value={settings.maxTicketsDisplay}
+              onChange={(e) => setSettings(prev => ({ ...prev, maxTicketsDisplay: parseInt(e.target.value) }))}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Show Advanced Features</Label>
+                <p className="text-sm text-gray-500">
+                  Display advanced AI features and detailed analytics
+                </p>
+              </div>
+              <Switch
+                checked={settings.showAdvancedFeatures}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, showAdvancedFeatures: checked }))}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Enable Demo Data</Label>
+                <p className="text-sm text-gray-500">
+                  Pre-populate the demo with sample tickets and documents
+                </p>
+              </div>
+              <Switch
+                checked={settings.enableDemoData}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableDemoData: checked }))}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Color Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
+            <Zap className="h-5 w-5 mr-2" />
+            Color Customization
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="primaryColor">Primary Color</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="primaryColor"
+                  type="color"
+                  value={settings.primaryColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                />
+                <Input
+                  value={settings.primaryColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="accentColor">Accent Color</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="accentColor"
+                  type="color"
+                  value={settings.accentColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, accentColor: e.target.value }))}
+                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                />
+                <Input
+                  value={settings.accentColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, accentColor: e.target.value }))}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="warningColor">Warning Color</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="warningColor"
+                  type="color"
+                  value={settings.warningColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, warningColor: e.target.value }))}
+                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                />
+                <Input
+                  value={settings.warningColor}
+                  onChange={(e) => setSettings(prev => ({ ...prev, warningColor: e.target.value }))}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-sm text-corporate-secondary mb-2">Color Preview</h4>
+            <div className="flex items-center space-x-4">
+              <div 
+                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
+                style={{ backgroundColor: settings.primaryColor }}
+              >
+                Primary
+              </div>
+              <div 
+                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
+                style={{ backgroundColor: settings.accentColor }}
+              >
+                Accent
+              </div>
+              <div 
+                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
+                style={{ backgroundColor: settings.warningColor }}
+              >
+                Warning
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

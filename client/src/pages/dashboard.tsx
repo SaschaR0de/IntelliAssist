@@ -16,15 +16,18 @@ import {
   Search,
   Brain,
   Plus,
-  ChevronRight
+  ChevronRight,
+  User
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { useDemoSettings } from "@/hooks/use-demo-settings";
 
 export default function Dashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const { settings, isLoading: settingsLoading } = useDemoSettings();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/stats"],
@@ -82,6 +85,29 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Personalized Header */}
+      {!settingsLoading && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-corporate-secondary" style={{ color: settings.primaryColor }}>
+                {settings.demoTitle}
+              </h1>
+              <p className="text-gray-600 mt-1">{settings.demoDescription}</p>
+              <p className="text-sm text-gray-500 mt-2">{settings.customWelcomeMessage}</p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span>{settings.demoUserName}</span>
+              </div>
+              <p className="text-xs text-gray-500">{settings.demoUserRole}</p>
+              <p className="text-xs text-gray-500">{settings.companyName}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
@@ -207,9 +233,11 @@ export default function Dashboard() {
             ) : recentTickets.length === 0 ? (
               <p className="text-gray-500 text-sm">No recent tickets</p>
             ) : (
-              recentTickets.map((ticket) => (
-                <TicketItem key={ticket.id} ticket={ticket} />
-              ))
+              recentTickets
+                .slice(0, settingsLoading ? 10 : settings.maxTicketsDisplay)
+                .map((ticket) => (
+                  <TicketItem key={ticket.id} ticket={ticket} />
+                ))
             )}
           </CardContent>
         </Card>

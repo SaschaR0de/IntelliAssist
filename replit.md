@@ -8,6 +8,8 @@ This is a full-stack web application that serves as an AI-powered corporate supp
 
 - **Database Integration (January 2025)**: Successfully migrated from in-memory storage to PostgreSQL database using Neon serverless. Added proper database relations and initialized with default response templates. Database schema includes users, tickets, documents, response templates, and search history tables.
 
+- **Demo Customization Features (January 2025)**: Added comprehensive demo personalization capabilities including custom app titles, company branding, color schemes, user personas, and feature toggles. Settings allow for different demo modes (basic, full, advanced) with configurable UI elements and maximum ticket display limits.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -66,6 +68,19 @@ Preferred communication style: Simple, everyday language.
 - **Implementation**: Local storage for user preferences
 - **Features**: OpenAI API configuration, model selection, behavior tuning
 - **Security**: API key management and validation
+
+### 6. Demo Customization System
+- **Purpose**: Personalize the application for different demonstration scenarios
+- **Implementation**: Persistent settings stored in localStorage with `useDemoSettings` hook
+- **Features**: 
+  - Custom app titles and company branding
+  - Color scheme customization (primary, accent, warning colors)
+  - User persona settings (name, role, company)
+  - Demo mode selection (basic, full, advanced)
+  - Feature toggles for advanced functionality
+  - Maximum ticket display configuration
+  - Custom welcome messages and descriptions
+- **Integration**: Settings are used throughout the UI including sidebar, header, and dashboard components
 
 ## Data Flow
 
