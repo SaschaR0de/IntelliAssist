@@ -7,7 +7,7 @@ interface TicketItemProps {
     id: number;
     title: string;
     priority: "low" | "medium" | "high";
-    createdAt: Date;
+    createdAt: Date | string;
     status: string;
   };
   onClick?: () => void;
@@ -23,9 +23,16 @@ export default function TicketItem({ ticket, onClick }: TicketItemProps) {
   const config = priorityConfig[ticket.priority];
   const IconComponent = config.icon;
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | string) => {
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Unknown time';
+    }
+    
+    const diffInMinutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 60) {
       return `${diffInMinutes} minutes ago`;
