@@ -58,14 +58,22 @@ export default function Settings() {
 
   useEffect(() => {
     // Load settings from localStorage
-    const savedSettings = localStorage.getItem("aiAgentSettings");
-    if (savedSettings) {
-      try {
+    try {
+      const savedSettings = localStorage.getItem("aiAgentSettings");
+      if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      } catch (error) {
-        console.error("Failed to parse saved settings:", error);
+        // Ensure all required fields have valid values
+        setSettings(prev => ({ 
+          ...prev, 
+          ...parsed,
+          maxTicketsDisplay: Number(parsed.maxTicketsDisplay) || 10,
+          temperature: Number(parsed.temperature) || 0.3,
+          maxTokens: Number(parsed.maxTokens) || 1000
+        }));
       }
+    } catch (error) {
+      console.error("Failed to parse saved settings:", error);
+      // Don't show toast during initial load to avoid circular dependencies
     }
   }, []);
 
@@ -504,7 +512,7 @@ export default function Settings() {
               min="1"
               max="50"
               value={settings.maxTicketsDisplay}
-              onChange={(e) => setSettings(prev => ({ ...prev, maxTicketsDisplay: parseInt(e.target.value) }))}
+              onChange={(e) => setSettings(prev => ({ ...prev, maxTicketsDisplay: Number(e.target.value) || 10 }))}
             />
           </div>
 
