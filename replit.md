@@ -4,6 +4,10 @@
 
 This is a full-stack web application that serves as an AI-powered corporate support assistant. The system helps automate and streamline support ticket management through intelligent triage, knowledge base search, and automated response generation. It's built with a modern tech stack featuring React frontend, Express backend, and PostgreSQL database with AI integration via OpenAI's GPT-4.
 
+## Recent Changes
+
+- **Database Integration (January 2025)**: Successfully migrated from in-memory storage to PostgreSQL database using Neon serverless. Added proper database relations and initialized with default response templates. Database schema includes users, tickets, documents, response templates, and search history tables.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

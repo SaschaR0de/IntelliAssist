@@ -15,6 +15,8 @@ import {
   type SearchHistory,
   type InsertSearchHistory
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, like, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -291,4 +293,160 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Ticket methods
+  async getAllTickets(): Promise<Ticket[]> {
+    return await db.select().from(tickets);
+  }
+
+  async getTicket(id: number): Promise<Ticket | undefined> {
+    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
+    return ticket || undefined;
+  }
+
+  async createTicket(insertTicket: InsertTicket): Promise<Ticket> {
+    const [ticket] = await db
+      .insert(tickets)
+      .values(insertTicket)
+      .returning();
+    return ticket;
+  }
+
+  async updateTicket(id: number, updates: Partial<Ticket>): Promise<Ticket | undefined> {
+    const [ticket] = await db
+      .update(tickets)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tickets.id, id))
+      .returning();
+    return ticket || undefined;
+  }
+
+  async deleteTicket(id: number): Promise<boolean> {
+    const result = await db.delete(tickets).where(eq(tickets.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Document methods
+  async getAllDocuments(): Promise<Document[]> {
+    return await db.select().from(documents);
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document || undefined;
+  }
+
+  async createDocument(insertDocument: InsertDocument): Promise<Document> {
+    const [document] = await db
+      .insert(documents)
+      .values(insertDocument)
+      .returning();
+    return document;
+  }
+
+  async updateDocument(id: number, updates: Partial<Document>): Promise<Document | undefined> {
+    const [document] = await db
+      .update(documents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    return document || undefined;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async searchDocuments(query: string): Promise<Document[]> {
+    return await db.select().from(documents).where(
+      like(documents.content, `%${query}%`)
+    );
+  }
+
+  // Response template methods
+  async getAllResponseTemplates(): Promise<ResponseTemplate[]> {
+    return await db.select().from(responseTemplates);
+  }
+
+  async getResponseTemplate(id: number): Promise<ResponseTemplate | undefined> {
+    const [template] = await db.select().from(responseTemplates).where(eq(responseTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createResponseTemplate(insertTemplate: InsertResponseTemplate): Promise<ResponseTemplate> {
+    const [template] = await db
+      .insert(responseTemplates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async updateResponseTemplate(id: number, updates: Partial<ResponseTemplate>): Promise<ResponseTemplate | undefined> {
+    const [template] = await db
+      .update(responseTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(responseTemplates.id, id))
+      .returning();
+    return template || undefined;
+  }
+
+  async deleteResponseTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(responseTemplates).where(eq(responseTemplates.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Search history methods
+  async getSearchHistory(): Promise<SearchHistory[]> {
+    return await db.select().from(searchHistory);
+  }
+
+  async createSearchHistory(insertSearch: InsertSearchHistory): Promise<SearchHistory> {
+    const [search] = await db
+      .insert(searchHistory)
+      .values(insertSearch)
+      .returning();
+    return search;
+  }
+
+  // Stats methods
+  async getStats(): Promise<{
+    ticketsProcessed: number;
+    documentsIndexed: number;
+    avgResponseTime: string;
+    autoResolved: string;
+  }> {
+    const allTickets = await db.select().from(tickets);
+    const allDocuments = await db.select().from(documents);
+    
+    const resolvedTickets = allTickets.filter(t => t.status === "resolved");
+    const autoResolvedCount = resolvedTickets.filter(t => t.aiSummary).length;
+    
+    return {
+      ticketsProcessed: allTickets.length,
+      documentsIndexed: allDocuments.length,
+      avgResponseTime: "2.3s",
+      autoResolved: allTickets.length > 0 ? `${Math.round((autoResolvedCount / allTickets.length) * 100)}%` : "0%"
+    };
+  }
+}
+
+export const storage = new DatabaseStorage();

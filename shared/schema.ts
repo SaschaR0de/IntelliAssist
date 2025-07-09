@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -53,6 +54,42 @@ export const searchHistory = pgTable("search_history", {
   results: json("results"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  tickets: many(tickets),
+  documents: many(documents),
+  responseTemplates: many(responseTemplates),
+  searchHistory: many(searchHistory),
+}));
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  user: one(users, {
+    fields: [tickets.id],
+    references: [users.id],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  user: one(users, {
+    fields: [documents.id],
+    references: [users.id],
+  }),
+}));
+
+export const responseTemplatesRelations = relations(responseTemplates, ({ one }) => ({
+  user: one(users, {
+    fields: [responseTemplates.id],
+    references: [users.id],
+  }),
+}));
+
+export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [searchHistory.id],
+    references: [users.id],
+  }),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
