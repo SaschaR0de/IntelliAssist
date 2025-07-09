@@ -99,7 +99,7 @@ export default function Responses() {
 
     draftResponseMutation.mutate({
       ticketId: selectedTicket.id,
-      templateId: selectedTemplate || undefined,
+      templateId: selectedTemplate && selectedTemplate !== "none" ? selectedTemplate : undefined,
       customContext: customContext || undefined
     });
   };
@@ -184,7 +184,7 @@ export default function Responses() {
                   <SelectValue placeholder="Choose a template..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No template</SelectItem>
+                  <SelectItem value="none">No template</SelectItem>
                   {templates?.map((template) => (
                     <SelectItem key={template.id} value={template.id.toString()}>
                       {template.title}

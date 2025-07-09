@@ -237,30 +237,33 @@ export default function Dashboard() {
               <p className="text-gray-500 text-sm">No templates available</p>
             ) : (
               templates?.slice(0, 3).map((template) => (
-                <div
-                  key={template.id}
-                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-corporate-secondary">
-                      {template.title}
-                    </h4>
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                <Link key={template.id} href="/responses">
+                  <div
+                    className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-corporate-secondary">
+                        {template.title}
+                      </h4>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {template.category} template
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {template.category} template
-                  </p>
-                </div>
+                </Link>
               ))
             )}
             {templates && templates.length > 0 && (
-              <Button 
-                className="w-full bg-corporate-accent hover:bg-green-600"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Template
-              </Button>
+              <Link href="/responses">
+                <Button 
+                  className="w-full bg-corporate-accent hover:bg-green-600"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Template
+                </Button>
+              </Link>
             )}
           </CardContent>
         </Card>
