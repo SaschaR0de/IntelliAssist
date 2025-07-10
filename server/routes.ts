@@ -142,7 +142,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (req.file) {
         // Handle file upload
-        const content = req.file.buffer.toString('utf-8');
+        let content: string;
+        
+        // Handle different file types
+        if (req.file.mimetype.startsWith('text/') || 
+            req.file.mimetype === 'application/json' ||
+            req.file.mimetype === 'application/xml' ||
+            req.file.originalname.endsWith('.txt') ||
+            req.file.originalname.endsWith('.md') ||
+            req.file.originalname.endsWith('.csv')) {
+          // Text files - convert to UTF-8
+          try {
+            content = req.file.buffer.toString('utf-8');
+          } catch (e) {
+            // If UTF-8 fails, try latin1
+            content = req.file.buffer.toString('latin1');
+          }
+        } else if (req.file.mimetype.startsWith('image/')) {
+          // Images - store as base64
+          content = `[Image: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}`;
+        } else {
+          // Other binary files - store metadata only
+          content = `[File: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nUploaded: ${new Date().toISOString()}`;
+        }
+        
         documentData = {
           title: req.body.title || req.file.originalname,
           content: content,
@@ -158,13 +181,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const document = await storage.createDocument(documentData);
       
-      // Generate AI summary
+      // Generate AI summary only for text content
       try {
-        const summary = await openaiService.summarizeDocument(document.content, document.filename);
-        await storage.updateDocument(document.id, {
-          aiSummary: summary.summary,
-          tags: [...(document.tags || []), ...summary.tags]
-        });
+        if (req.file && (req.file.mimetype.startsWith('text/') || 
+                        req.file.mimetype === 'application/json' ||
+                        req.file.originalname.endsWith('.txt') ||
+                        req.file.originalname.endsWith('.md'))) {
+          const summary = await openaiService.summarizeDocument(document.content, document.filename);
+          await storage.updateDocument(document.id, {
+            aiSummary: summary.summary,
+            tags: [...(document.tags || []), ...summary.tags]
+          });
+        }
       } catch (aiError: any) {
         console.warn("Failed to generate AI summary:", aiError?.message || "Unknown error");
       }
