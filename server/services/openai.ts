@@ -213,11 +213,25 @@ export class OpenAIService {
     }
 
     try {
-      const relevantDocs = documents.filter(doc => 
-        doc.title.toLowerCase().includes(query.toLowerCase()) ||
-        doc.content.toLowerCase().includes(query.toLowerCase()) ||
-        doc.tags?.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
-      );
+      // Enhanced filtering with better scoring
+      const relevantDocs = documents.filter(doc => {
+        const queryLower = query.toLowerCase();
+        const titleMatch = doc.title.toLowerCase().includes(queryLower);
+        const contentMatch = doc.content.toLowerCase().includes(queryLower);
+        const tagMatch = doc.tags?.some((tag: string) => tag.toLowerCase().includes(queryLower));
+        const summaryMatch = doc.aiSummary?.toLowerCase().includes(queryLower);
+        
+        return titleMatch || contentMatch || tagMatch || summaryMatch;
+      }).map(doc => ({
+        ...doc,
+        // Add relevance score based on where the match occurs
+        searchScore: (
+          (doc.title.toLowerCase().includes(query.toLowerCase()) ? 3 : 0) +
+          (doc.aiSummary?.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
+          (doc.content.toLowerCase().includes(query.toLowerCase()) ? 1 : 0) +
+          (doc.tags?.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())) ? 1 : 0)
+        )
+      })).sort((a, b) => b.searchScore - a.searchScore);
 
       if (relevantDocs.length === 0) {
         return [];
@@ -228,23 +242,35 @@ export class OpenAIService {
         messages: [
           {
             role: "system",
-            content: `You are a knowledge search AI. Given a user query and relevant documents, 
-            provide the most relevant information that answers the query.
+            content: `You are an expert knowledge search AI. Given a user query and relevant documents, 
+            provide the most helpful and accurate information that answers the query.
+            
+            Focus on:
+            - Extracting the most relevant information from documents
+            - Providing specific details and examples when available
+            - Summarizing key concepts clearly
+            - Highlighting practical information users can act on
             
             Return JSON with an array of search results, each containing:
-            - content: The relevant information that answers the query
+            - content: The relevant information that answers the query (be specific and detailed)
             - relevance: Number from 0-1 indicating how relevant this content is
             - source: The document title or source
-            - context: Brief context about where this information comes from
+            - context: Brief context about where this information comes from and why it's useful
             
             Respond only with valid JSON containing a "results" array.`
           },
           {
             role: "user",
-            content: `Query: ${query}
+            content: `Query: "${query}"
             
-            Available documents:
-            ${relevantDocs.map(doc => `Title: ${doc.title}\nContent: ${doc.content.substring(0, 500)}...\n`).join('\n')}`
+            Available documents (sorted by relevance):
+            ${relevantDocs.map((doc, index) => `
+Document ${index + 1}:
+Title: ${doc.title}
+AI Summary: ${doc.aiSummary || 'No summary available'}
+Content Preview: ${doc.content.substring(0, 800)}...
+Tags: ${doc.tags?.join(', ') || 'No tags'}
+`).join('\n')}`
           }
         ],
         response_format: { type: "json_object" },

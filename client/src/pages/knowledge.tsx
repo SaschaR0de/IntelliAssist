@@ -225,7 +225,7 @@ export default function Knowledge() {
         </div>
       )}
 
-      {/* Knowledge Base Overview */}
+      {/* Knowledge Base Overview & AI Summaries */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
@@ -267,35 +267,53 @@ export default function Knowledge() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-corporate-secondary">
-              Recent Searches
+            <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
+              <Brain className="h-5 w-5 mr-2 text-corporate-primary" />
+              AI Document Summaries
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {searchHistory?.length === 0 ? (
+            {documentsLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="animate-pulse bg-gray-100 h-20 rounded-lg" />
+                ))}
+              </div>
+            ) : documents?.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
-                No search history yet.
+                No documents to summarize yet.
               </p>
             ) : (
-              <div className="space-y-3">
-                {searchHistory?.slice(0, 5).map((search: any) => (
-                  <div key={search.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <h4 className="text-sm font-medium text-corporate-secondary">{search.query}</h4>
-                      <p className="text-xs text-gray-500 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {new Date(search.createdAt).toLocaleDateString()}
-                      </p>
+              <div className="space-y-4">
+                {documents?.filter((doc: any) => doc.aiSummary).slice(0, 3).map((doc: any) => (
+                  <div key={doc.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="text-sm font-medium text-corporate-secondary">{doc.title}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {doc.category}
+                      </Badge>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setSearchQuery(search.query)}
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
+                    <p className="text-sm text-gray-700 mb-2">{doc.aiSummary}</p>
+                    {doc.tags && doc.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {doc.tags.slice(0, 3).map((tag: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-xs cursor-pointer hover:bg-gray-300"
+                            onClick={() => setSearchQuery(tag)}>
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
+                {documents?.filter((doc: any) => doc.aiSummary).length === 0 && (
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-800">
+                      <Brain className="h-4 w-4 inline mr-1" />
+                      AI summaries are being generated for your documents. This usually takes a few seconds after upload.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
