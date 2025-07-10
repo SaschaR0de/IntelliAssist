@@ -214,7 +214,10 @@ export default function Responses() {
             disabled={!selectedTicket || draftResponseMutation.isPending}
           >
             {draftResponseMutation.isPending ? (
-              <ThinkingMascot size="sm" message="Generating response..." />
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating response...
+              </div>
             ) : (
               <>
                 <Brain className="h-4 w-4 mr-2" />
