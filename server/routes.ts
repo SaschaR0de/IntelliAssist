@@ -158,9 +158,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // If UTF-8 fails, try latin1
             content = req.file.buffer.toString('latin1');
           }
+        } else if (req.file.mimetype.startsWith('audio/') || 
+                   req.file.originalname.endsWith('.mp3') ||
+                   req.file.originalname.endsWith('.wav') ||
+                   req.file.originalname.endsWith('.m4a') ||
+                   req.file.originalname.endsWith('.ogg')) {
+          // Audio files - will be transcribed
+          content = `[Audio File: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for transcription...`;
         } else if (req.file.mimetype.startsWith('image/')) {
-          // Images - store as base64
-          content = `[Image: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}`;
+          // Images - store metadata and will be analyzed
+          content = `[Image: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for analysis...`;
         } else {
           // Other binary files - store metadata only
           content = `[File: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nUploaded: ${new Date().toISOString()}`;
