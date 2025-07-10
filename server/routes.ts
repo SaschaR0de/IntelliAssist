@@ -9,6 +9,7 @@ import {
   insertSearchHistorySchema 
 } from "@shared/schema";
 import multer from "multer";
+// PDF parsing will be loaded dynamically when needed
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -160,8 +161,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else if (req.file.mimetype === 'application/pdf' ||
                    req.file.originalname.endsWith('.pdf')) {
-          // PDF files - store metadata and prepare for text extraction
-          content = `[PDF Document: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nPages: Analyzing...\nStatus: Processing for AI analysis...\nUploaded: ${new Date().toISOString()}`;
+          // PDF files - extract actual text content
+          try {
+            const pdfParse = (await import("pdf-parse")).default;
+            const pdfData = await pdfParse(req.file.buffer);
+            content = pdfData.text || `[PDF Document: ${req.file.originalname}]\nText extraction failed, but file was uploaded successfully.\nSize: ${req.file.size} bytes\nPages: ${pdfData.numpages || 'Unknown'}\nUploaded: ${new Date().toISOString()}`;
+          } catch (pdfError) {
+            content = `[PDF Document: ${req.file.originalname}]\nText extraction failed: ${pdfError.message}\nSize: ${req.file.size} bytes\nUploaded: ${new Date().toISOString()}`;
+          }
         } else if (req.file.mimetype.startsWith('application/') && 
                    (req.file.originalname.endsWith('.doc') || 
                     req.file.originalname.endsWith('.docx') ||
@@ -191,30 +198,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const document = await storage.createDocument(documentData);
       
-      // Generate AI summary for various content types
+      // Generate AI summary for text content only (skip AI for metadata-only content)
       try {
-        const shouldAnalyze = req.file && (
+        const hasTextContent = document.content && 
+          document.content.length > 100 && 
+          !document.content.startsWith('[') && 
+          !document.content.includes('Text extraction failed');
+
+        const shouldAnalyze = req.file && hasTextContent && (
           req.file.mimetype.startsWith('text/') || 
           req.file.mimetype === 'application/json' ||
           req.file.mimetype === 'application/pdf' ||
-          req.file.mimetype.startsWith('image/') ||
           req.file.originalname.endsWith('.txt') ||
           req.file.originalname.endsWith('.md') ||
           req.file.originalname.endsWith('.csv') ||
-          req.file.originalname.endsWith('.pdf') ||
-          req.file.originalname.endsWith('.doc') ||
-          req.file.originalname.endsWith('.docx')
+          req.file.originalname.endsWith('.pdf')
         );
 
         if (shouldAnalyze) {
-          const summary = await openaiService.summarizeDocument(document.content, document.filename);
-          await storage.updateDocument(document.id, {
-            aiSummary: summary.summary,
-            tags: [...(document.tags || []), ...summary.tags]
-          });
+          // Process in background to avoid blocking the response
+          setTimeout(async () => {
+            try {
+              const summary = await openaiService.summarizeDocument(document.content, document.filename);
+              await storage.updateDocument(document.id, {
+                aiSummary: summary.summary,
+                tags: [...(document.tags || []), ...summary.tags]
+              });
+            } catch (bgError: any) {
+              console.warn("Background AI summary failed:", bgError?.message || "Unknown error");
+            }
+          }, 100);
         }
       } catch (aiError: any) {
-        console.warn("Failed to generate AI summary:", aiError?.message || "Unknown error");
+        console.warn("Failed to set up AI summary:", aiError?.message || "Unknown error");
       }
 
       res.json(document);
