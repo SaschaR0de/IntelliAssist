@@ -9,7 +9,9 @@ import {
   insertSearchHistorySchema 
 } from "@shared/schema";
 import multer from "multer";
-// PDF parsing will be loaded dynamically when needed
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -163,10 +165,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                    req.file.originalname.endsWith('.pdf')) {
           // PDF files - extract actual text content
           try {
-            const pdfParse = (await import("pdf-parse")).default;
-            const pdfData = await pdfParse(req.file.buffer);
-            content = pdfData.text || `[PDF Document: ${req.file.originalname}]\nText extraction failed, but file was uploaded successfully.\nSize: ${req.file.size} bytes\nPages: ${pdfData.numpages || 'Unknown'}\nUploaded: ${new Date().toISOString()}`;
-          } catch (pdfError) {
+            const pdfExtract = (await import("pdf-text-extract")).default;
+            
+            // Write buffer to temporary file
+            const tempFile = path.join(os.tmpdir(), `temp_${Date.now()}.pdf`);
+            fs.writeFileSync(tempFile, req.file.buffer);
+            
+            // Extract text
+            const pages = await new Promise<string[]>((resolve, reject) => {
+              pdfExtract(tempFile, (err: any, pages: string[]) => {
+                if (err) reject(err);
+                else resolve(pages);
+              });
+            });
+            
+            // Clean up temp file
+            fs.unlinkSync(tempFile);
+            
+            const extractedText = pages.join('\n\n--- Page Break ---\n\n');
+            content = extractedText || `[PDF Document: ${req.file.originalname}]\nText extraction failed, but file was uploaded successfully.\nSize: ${req.file.size} bytes\nPages: ${pages.length}\nUploaded: ${new Date().toISOString()}`;
+          } catch (pdfError: any) {
             content = `[PDF Document: ${req.file.originalname}]\nText extraction failed: ${pdfError.message}\nSize: ${req.file.size} bytes\nUploaded: ${new Date().toISOString()}`;
           }
         } else if (req.file.mimetype.startsWith('application/') && 
