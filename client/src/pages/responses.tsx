@@ -72,6 +72,7 @@ export default function Responses() {
       return apiRequest("POST", "/api/draft-response", data);
     },
     onSuccess: (data) => {
+      console.log("Draft response received:", data);
       setDraftResponse(data);
       toast({
         title: "Response drafted",
@@ -79,6 +80,7 @@ export default function Responses() {
       });
     },
     onError: (error) => {
+      console.error("Draft response error:", error);
       toast({
         title: "Error",
         description: error.message,
