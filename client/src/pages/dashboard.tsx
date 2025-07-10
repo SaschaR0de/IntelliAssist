@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { useDemoSettings } from "@/hooks/use-demo-settings";
+import LoadingMascot, { ThinkingMascot, ProcessingMascot } from "@/components/ui/loading-mascot";
 
 export default function Dashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -225,10 +226,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {ticketsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse bg-gray-100 h-16 rounded-lg" />
-                ))}
+              <div className="flex justify-center py-8">
+                <LoadingMascot 
+                  size="md" 
+                  message="Loading tickets..." 
+                  showSparkles={true}
+                />
               </div>
             ) : recentTickets.length === 0 ? (
               <p className="text-gray-500 text-sm">No recent tickets</p>
@@ -256,10 +259,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {templatesLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse bg-gray-100 h-16 rounded-lg" />
-                ))}
+              <div className="flex justify-center py-8">
+                <ThinkingMascot 
+                  size="md" 
+                  message="Loading templates..." 
+                />
               </div>
             ) : templates?.length === 0 ? (
               <p className="text-gray-500 text-sm">No templates available</p>

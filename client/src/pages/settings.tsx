@@ -60,20 +60,27 @@ export default function Settings() {
     // Load settings from localStorage
     try {
       const savedSettings = localStorage.getItem("aiAgentSettings");
-      if (savedSettings) {
+      if (savedSettings && savedSettings.trim()) {
         const parsed = JSON.parse(savedSettings);
-        // Ensure all required fields have valid values
-        setSettings(prev => ({ 
-          ...prev, 
-          ...parsed,
-          maxTicketsDisplay: Number(parsed.maxTicketsDisplay) || 10,
-          temperature: Number(parsed.temperature) || 0.3,
-          maxTokens: Number(parsed.maxTokens) || 1000
-        }));
+        if (parsed && typeof parsed === 'object') {
+          // Ensure all required fields have valid values
+          const safeMaxTickets = parseInt(parsed?.maxTicketsDisplay);
+          const safeTemperature = parseFloat(parsed?.temperature);
+          const safeMaxTokens = parseInt(parsed?.maxTokens);
+          
+          setSettings(prev => ({ 
+            ...prev, 
+            ...parsed,
+            maxTicketsDisplay: !isNaN(safeMaxTickets) && safeMaxTickets >= 1 && safeMaxTickets <= 50 ? safeMaxTickets : 10,
+            temperature: !isNaN(safeTemperature) && safeTemperature >= 0 && safeTemperature <= 2 ? safeTemperature : 0.3,
+            maxTokens: !isNaN(safeMaxTokens) && safeMaxTokens >= 100 && safeMaxTokens <= 4000 ? safeMaxTokens : 1000
+          }));
+        }
       }
     } catch (error) {
       console.error("Failed to parse saved settings:", error);
-      // Don't show toast during initial load to avoid circular dependencies
+      // Clear corrupted data
+      localStorage.removeItem("aiAgentSettings");
     }
   }, []);
 
@@ -231,7 +238,13 @@ export default function Settings() {
                 max="2"
                 step="0.1"
                 value={settings.temperature}
-                onChange={(e) => setSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 2) {
+                    setSettings(prev => ({ ...prev, temperature: numValue }));
+                  }
+                }}
               />
             </div>
           </div>
@@ -244,7 +257,13 @@ export default function Settings() {
               min="100"
               max="4000"
               value={settings.maxTokens}
-              onChange={(e) => setSettings(prev => ({ ...prev, maxTokens: parseInt(e.target.value) }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                const numValue = parseInt(value);
+                if (!isNaN(numValue) && numValue >= 100 && numValue <= 4000) {
+                  setSettings(prev => ({ ...prev, maxTokens: numValue }));
+                }
+              }}
             />
           </div>
 
@@ -512,7 +531,13 @@ export default function Settings() {
               min="1"
               max="50"
               value={settings.maxTicketsDisplay}
-              onChange={(e) => setSettings(prev => ({ ...prev, maxTicketsDisplay: Number(e.target.value) || 10 }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                const numValue = parseInt(value);
+                if (!isNaN(numValue) && numValue >= 1 && numValue <= 50) {
+                  setSettings(prev => ({ ...prev, maxTicketsDisplay: numValue }));
+                }
+              }}
             />
           </div>
 

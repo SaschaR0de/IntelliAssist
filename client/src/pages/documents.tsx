@@ -26,6 +26,7 @@ import {
   Brain,
   Loader2
 } from "lucide-react";
+import LoadingMascot, { ProcessingMascot } from "@/components/ui/loading-mascot";
 
 export default function Documents() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -235,11 +236,13 @@ export default function Documents() {
                     className="w-full"
                   >
                     {uploadDocumentMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <ProcessingMascot size="sm" message="Uploading..." />
                     ) : (
-                      <Upload className="h-4 w-4 mr-2" />
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload File
+                      </>
                     )}
-                    Upload File
                   </Button>
                 </CardContent>
               </Card>
@@ -294,11 +297,13 @@ export default function Documents() {
                     className="w-full bg-corporate-accent hover:bg-green-600"
                   >
                     {uploadDocumentMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <ProcessingMascot size="sm" message="Adding..." />
                     ) : (
-                      <Plus className="h-4 w-4 mr-2" />
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Document
+                      </>
                     )}
-                    Add Document
                   </Button>
                 </CardContent>
               </Card>
@@ -310,10 +315,8 @@ export default function Documents() {
       {/* Documents Grid */}
       <div className="grid grid-cols-1 gap-6">
         {documentsLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="animate-pulse bg-gray-100 h-24 rounded-lg" />
-            ))}
+          <div className="flex justify-center py-16">
+            <LoadingMascot size="lg" message="Loading knowledge base..." showSparkles={true} />
           </div>
         ) : filteredDocuments?.length === 0 ? (
           <Card>

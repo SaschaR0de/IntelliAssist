@@ -12,6 +12,7 @@ import TicketItem from "@/components/ticket-item";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Brain, Zap, Plus, Loader2 } from "lucide-react";
+import LoadingMascot, { ThinkingMascot, ProcessingMascot } from "@/components/ui/loading-mascot";
 
 export default function Triage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -135,11 +136,13 @@ export default function Triage() {
               disabled={!selectedFile || createTicketMutation.isPending}
             >
               {createTicketMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <ProcessingMascot size="sm" message="Creating..." />
               ) : (
-                <Plus className="h-4 w-4 mr-2" />
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Ticket from File
+                </>
               )}
-              Create Ticket from File
             </Button>
           </CardContent>
         </Card>
@@ -188,11 +191,13 @@ export default function Triage() {
               disabled={!manualTicket.title || !manualTicket.description || createTicketMutation.isPending}
             >
               {createTicketMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <ProcessingMascot size="sm" message="Creating..." />
               ) : (
-                <Plus className="h-4 w-4 mr-2" />
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Manual Ticket
+                </>
               )}
-              Create Manual Ticket
             </Button>
           </CardContent>
         </Card>
@@ -214,8 +219,7 @@ export default function Triage() {
 
             {analyzeTicketMutation.isPending ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-corporate-primary" />
-                <span className="ml-2 text-gray-600">Analyzing ticket...</span>
+                <ThinkingMascot size="lg" message="Analyzing ticket with AI..." />
               </div>
             ) : analysis ? (
               <div className="space-y-4">
@@ -276,10 +280,8 @@ export default function Triage() {
         </CardHeader>
         <CardContent>
           {ticketsLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-100 h-16 rounded-lg" />
-              ))}
+            <div className="flex justify-center py-12">
+              <LoadingMascot size="lg" message="Loading support tickets..." showSparkles={true} />
             </div>
           ) : tickets?.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No tickets found. Create your first ticket above.</p>

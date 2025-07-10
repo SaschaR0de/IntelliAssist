@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, Brain, Copy, Check, Loader2 } from "lucide-react";
+import LoadingMascot, { ThinkingMascot, ProcessingMascot } from "@/components/ui/loading-mascot";
 
 export default function Responses() {
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
@@ -213,11 +214,13 @@ export default function Responses() {
             disabled={!selectedTicket || draftResponseMutation.isPending}
           >
             {draftResponseMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <ThinkingMascot size="sm" message="Generating response..." />
             ) : (
-              <Brain className="h-4 w-4 mr-2" />
+              <>
+                <Brain className="h-4 w-4 mr-2" />
+                Draft AI Response
+              </>
             )}
-            Draft AI Response
           </Button>
         </CardContent>
       </Card>
@@ -361,11 +364,13 @@ export default function Responses() {
                     className="flex-1 bg-corporate-primary hover:bg-blue-600"
                   >
                     {createTemplateMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <ProcessingMascot size="sm" message="Creating..." />
                     ) : (
-                      <Plus className="h-4 w-4 mr-2" />
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Template
+                      </>
                     )}
-                    Create Template
                   </Button>
                 </div>
               </div>
