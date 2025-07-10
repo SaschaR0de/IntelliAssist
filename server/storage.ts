@@ -437,14 +437,36 @@ export class DatabaseStorage implements IStorage {
     const allTickets = await db.select().from(tickets);
     const allDocuments = await db.select().from(documents);
     
+    // Count tickets with AI analysis as "processed"
+    const processedTickets = allTickets.filter(t => t.aiSummary);
     const resolvedTickets = allTickets.filter(t => t.status === "resolved");
+    
+    // Calculate average response time based on ticket creation to resolution
+    let avgResponseTimeMs = 0;
+    if (resolvedTickets.length > 0) {
+      const totalTime = resolvedTickets.reduce((sum, ticket) => {
+        const created = new Date(ticket.createdAt).getTime();
+        const updated = new Date(ticket.updatedAt).getTime();
+        return sum + (updated - created);
+      }, 0);
+      avgResponseTimeMs = totalTime / resolvedTickets.length;
+    }
+    
+    const avgResponseTime = avgResponseTimeMs > 0 
+      ? `${Math.round(avgResponseTimeMs / 1000)}s`
+      : "N/A";
+    
+    // Calculate auto-resolved percentage (tickets with AI summary that are resolved)
     const autoResolvedCount = resolvedTickets.filter(t => t.aiSummary).length;
+    const autoResolvedPercentage = allTickets.length > 0 
+      ? Math.round((autoResolvedCount / allTickets.length) * 100)
+      : 0;
     
     return {
-      ticketsProcessed: allTickets.length,
+      ticketsProcessed: processedTickets.length,
       documentsIndexed: allDocuments.length,
-      avgResponseTime: "2.3s",
-      autoResolved: allTickets.length > 0 ? `${Math.round((autoResolvedCount / allTickets.length) * 100)}%` : "0%"
+      avgResponseTime,
+      autoResolved: `${autoResolvedPercentage}%`
     };
   }
 }

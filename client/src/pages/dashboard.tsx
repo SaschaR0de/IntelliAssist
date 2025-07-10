@@ -112,31 +112,27 @@ export default function Dashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Tickets Processed"
+          title="AI-Analyzed Tickets"
           value={stats?.ticketsProcessed || 0}
           icon={<TicketIcon className="h-6 w-6 text-corporate-primary" />}
-          trend={{ direction: "up", value: "12% increase" }}
           bgColor="bg-blue-100"
         />
         <StatsCard
           title="Knowledge Base"
-          value={stats?.documentsIndexed || 0}
+          value={`${stats?.documentsIndexed || 0} docs`}
           icon={<Database className="h-6 w-6 text-corporate-accent" />}
-          trend={{ direction: "up", value: "8 new docs" }}
           bgColor="bg-green-100"
         />
         <StatsCard
-          title="Response Time"
-          value={stats?.avgResponseTime || "0s"}
+          title="Avg Response Time"
+          value={stats?.avgResponseTime || "N/A"}
           icon={<Clock className="h-6 w-6 text-corporate-warning" />}
-          trend={{ direction: "down", value: "0.5s faster" }}
           bgColor="bg-yellow-100"
         />
         <StatsCard
-          title="Auto-Resolved"
+          title="Auto-Resolved Rate"
           value={stats?.autoResolved || "0%"}
           icon={<Zap className="h-6 w-6 text-purple-600" />}
-          trend={{ direction: "up", value: "5% increase" }}
           bgColor="bg-purple-100"
         />
       </div>
