@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { monitoringSDK } from "../../lib/monitoring-sdk";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -44,31 +45,41 @@ export class OpenAIService {
     }
 
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert customer support AI that analyzes support tickets. 
-            Analyze the ticket content and provide a comprehensive analysis in JSON format with:
-            - summary: A clear, concise summary of the issue
-            - priority: "low", "medium", or "high" based on urgency and impact
-            - category: The main category of the issue (e.g., "technical", "account", "billing", "feature_request")
-            - urgency: A number from 1-10 indicating how urgent this issue is
-            - sentiment: "positive", "neutral", or "negative" based on customer tone
-            - suggestedActions: Array of specific actions to resolve the issue
-            - estimatedResolutionTime: Estimated time to resolve (e.g., "2-4 hours", "1-2 days")
-            
-            Respond only with valid JSON.`
-          },
-          {
-            role: "user",
-            content: `Analyze this support ticket: ${content}`
+      const response = await monitoringSDK.wrap(
+        () => openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert customer support AI that analyzes support tickets. 
+              Analyze the ticket content and provide a comprehensive analysis in JSON format with:
+              - summary: A clear, concise summary of the issue
+              - priority: "low", "medium", or "high" based on urgency and impact
+              - category: The main category of the issue (e.g., "technical", "account", "billing", "feature_request")
+              - urgency: A number from 1-10 indicating how urgent this issue is
+              - sentiment: "positive", "neutral", or "negative" based on customer tone
+              - suggestedActions: Array of specific actions to resolve the issue
+              - estimatedResolutionTime: Estimated time to resolve (e.g., "2-4 hours", "1-2 days")
+              
+              Respond only with valid JSON.`
+            },
+            {
+              role: "user",
+              content: `Analyze this support ticket: ${content}`
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.3
+        }),
+        {
+          operation: "ticket_analysis",
+          metadata: {
+            contentLength: content.length,
+            model: "gpt-4o",
+            temperature: 0.3
           }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.3
-      });
+        }
+      );
 
       const analysis = JSON.parse(response.choices[0].message.content || "{}");
       return {
