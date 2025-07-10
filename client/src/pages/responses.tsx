@@ -71,8 +71,7 @@ export default function Responses() {
     mutationFn: async (data: any) => {
       return apiRequest("POST", "/api/draft-response", data);
     },
-    onSuccess: (response) => {
-      const data = response.json();
+    onSuccess: (data) => {
       setDraftResponse(data);
       toast({
         title: "Response drafted",
@@ -265,7 +264,7 @@ export default function Responses() {
               Generated Response
               <div className="flex items-center space-x-2">
                 <span className={`text-sm ${getConfidenceColor(draftResponse.confidence)}`}>
-                  {Math.round(draftResponse.confidence * 100)}% confidence
+                  {Math.round((draftResponse.confidence || 0) * 100)}% confidence
                 </span>
                 <Button
                   variant="outline"
