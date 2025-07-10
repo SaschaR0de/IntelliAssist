@@ -91,23 +91,52 @@ export class OpenAIService {
     }
 
     try {
+      // Determine document type and create appropriate analysis
+      const isImageFile = filename.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|webp)$/);
+      const isPdfFile = filename.toLowerCase().match(/\.pdf$/);
+      const isDocFile = filename.toLowerCase().match(/\.(doc|docx|rtf)$/);
+      
+      let systemPrompt = `You are a document analysis AI. Analyze the document content and provide a comprehensive summary in JSON format with:
+      - summary: A clear, concise summary of the document
+      - keyPoints: Array of main points or topics covered
+      - category: The main category (e.g., "documentation", "policy", "guide", "faq", "image", "pdf", "spreadsheet")
+      - tags: Array of relevant tags for search and categorization
+      - searchableTerms: Array of important terms that would help users find this document
+      
+      Respond only with valid JSON.`;
+
+      let userContent = `Analyze this document (filename: ${filename}): ${content.substring(0, 4000)}`;
+
+      if (isImageFile) {
+        systemPrompt = `You are analyzing an image file. Based on the metadata provided, create a comprehensive analysis in JSON format with:
+        - summary: Description of what this image contains or represents
+        - keyPoints: Array of key visual elements or information
+        - category: "image" or more specific like "screenshot", "diagram", "photo"
+        - tags: Relevant tags for search and categorization
+        - searchableTerms: Terms that would help users find this image`;
+        
+        userContent = `Analyze this image file (filename: ${filename}): ${content}`;
+      } else if (isPdfFile || isDocFile) {
+        systemPrompt = `You are analyzing a ${isPdfFile ? 'PDF' : 'document'} file. Based on the metadata and any available content, create a comprehensive analysis in JSON format with:
+        - summary: Description of the document's purpose and content
+        - keyPoints: Array of main topics or sections likely covered
+        - category: Document type like "manual", "report", "policy", "guide"
+        - tags: Relevant tags for search and categorization
+        - searchableTerms: Terms that would help users find this document`;
+        
+        userContent = `Analyze this ${isPdfFile ? 'PDF' : 'document'} file (filename: ${filename}): ${content}`;
+      }
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: `You are a document analysis AI. Analyze the document content and provide a comprehensive summary in JSON format with:
-            - summary: A clear, concise summary of the document
-            - keyPoints: Array of main points or topics covered
-            - category: The main category (e.g., "documentation", "policy", "guide", "faq")
-            - tags: Array of relevant tags for search and categorization
-            - searchableTerms: Array of important terms that would help users find this document
-            
-            Respond only with valid JSON.`
+            content: systemPrompt
           },
           {
             role: "user",
-            content: `Analyze this document (filename: ${filename}): ${content.substring(0, 4000)}`
+            content: userContent
           }
         ],
         response_format: { type: "json_object" },

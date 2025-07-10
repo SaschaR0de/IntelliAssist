@@ -158,16 +158,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // If UTF-8 fails, try latin1
             content = req.file.buffer.toString('latin1');
           }
-        } else if (req.file.mimetype.startsWith('audio/') || 
-                   req.file.originalname.endsWith('.mp3') ||
-                   req.file.originalname.endsWith('.wav') ||
-                   req.file.originalname.endsWith('.m4a') ||
-                   req.file.originalname.endsWith('.ogg')) {
-          // Audio files - will be transcribed
-          content = `[Audio File: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for transcription...`;
+        } else if (req.file.mimetype === 'application/pdf' ||
+                   req.file.originalname.endsWith('.pdf')) {
+          // PDF files - store metadata and prepare for text extraction
+          content = `[PDF Document: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nPages: Analyzing...\nStatus: Processing for AI analysis...\nUploaded: ${new Date().toISOString()}`;
+        } else if (req.file.mimetype.startsWith('application/') && 
+                   (req.file.originalname.endsWith('.doc') || 
+                    req.file.originalname.endsWith('.docx') ||
+                    req.file.originalname.endsWith('.rtf'))) {
+          // Document files - store metadata
+          content = `[Document: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for AI analysis...\nUploaded: ${new Date().toISOString()}`;
         } else if (req.file.mimetype.startsWith('image/')) {
           // Images - store metadata and will be analyzed
-          content = `[Image: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for analysis...`;
+          content = `[Image: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nStatus: Processing for visual analysis...\nUploaded: ${new Date().toISOString()}`;
         } else {
           // Other binary files - store metadata only
           content = `[File: ${req.file.originalname}]\nSize: ${req.file.size} bytes\nType: ${req.file.mimetype}\nUploaded: ${new Date().toISOString()}`;
@@ -188,12 +191,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const document = await storage.createDocument(documentData);
       
-      // Generate AI summary only for text content
+      // Generate AI summary for various content types
       try {
-        if (req.file && (req.file.mimetype.startsWith('text/') || 
-                        req.file.mimetype === 'application/json' ||
-                        req.file.originalname.endsWith('.txt') ||
-                        req.file.originalname.endsWith('.md'))) {
+        const shouldAnalyze = req.file && (
+          req.file.mimetype.startsWith('text/') || 
+          req.file.mimetype === 'application/json' ||
+          req.file.mimetype === 'application/pdf' ||
+          req.file.mimetype.startsWith('image/') ||
+          req.file.originalname.endsWith('.txt') ||
+          req.file.originalname.endsWith('.md') ||
+          req.file.originalname.endsWith('.csv') ||
+          req.file.originalname.endsWith('.pdf') ||
+          req.file.originalname.endsWith('.doc') ||
+          req.file.originalname.endsWith('.docx')
+        );
+
+        if (shouldAnalyze) {
           const summary = await openaiService.summarizeDocument(document.content, document.filename);
           await storage.updateDocument(document.id, {
             aiSummary: summary.summary,
