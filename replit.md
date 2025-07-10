@@ -6,6 +6,8 @@ This is a full-stack web application that serves as an AI-powered corporate supp
 
 ## Recent Changes
 
+- **AI Response Drafting Fix (January 2025)**: Resolved critical issue where AI responses weren't displaying properly. Fixed API response parsing in the client-side mutation handler, enabling full display of AI-generated responses with confidence percentages and improvement suggestions.
+
 - **Settings Page Stability Fix (January 2025)**: Completely resolved the infinite loop crash issue in the settings page by implementing stable state management patterns. Replaced problematic useEffect dependencies and input validation logic with controlled state updates that prevent re-render loops.
 
 - **Enhanced Loading Experience (January 2025)**: Implemented animated loading mascot throughout the application with three variants (LoadingMascot, ThinkingMascot, ProcessingMascot) to provide engaging user feedback during AI processing, data loading, and form submissions across all pages.

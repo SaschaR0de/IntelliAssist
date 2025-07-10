@@ -309,7 +309,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/draft-response", async (req, res) => {
     try {
       const { ticketId, templateId, customContext } = req.body;
-      console.log("Draft response request:", { ticketId, templateId, customContext });
       
       const ticket = await storage.getTicket(ticketId);
       if (!ticket) {
@@ -327,10 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         template?.content
       );
 
-      console.log("Draft response generated:", draft);
       res.json(draft);
     } catch (error: any) {
-      console.error("Draft response error:", error);
       res.status(500).json({ error: error?.message || "Unknown error" });
     }
   });
