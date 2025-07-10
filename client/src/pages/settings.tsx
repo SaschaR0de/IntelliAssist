@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,19 +54,35 @@ export default function Settings() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({ renderCount: 0, lastUpdate: Date.now() });
   const { toast } = useToast();
+
+  // Debug render counting (only tracks actual settings changes)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebugInfo(prev => ({ 
+        renderCount: prev.renderCount + 1, 
+        lastUpdate: Date.now() 
+      }));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [JSON.stringify(settings)]);
 
   useEffect(() => {
     // Load settings from localStorage
     try {
+      console.log("Loading settings from localStorage");
       const savedSettings = localStorage.getItem("aiAgentSettings");
       if (savedSettings && savedSettings.trim()) {
         const parsed = JSON.parse(savedSettings);
+        console.log("Parsed settings:", parsed);
         if (parsed && typeof parsed === 'object') {
           // Ensure all required fields have valid values
           const safeMaxTickets = parseInt(parsed?.maxTicketsDisplay);
           const safeTemperature = parseFloat(parsed?.temperature);
           const safeMaxTokens = parseInt(parsed?.maxTokens);
+          
+          console.log("Safe values:", { safeMaxTickets, safeTemperature, safeMaxTokens });
           
           setSettings(prev => ({ 
             ...prev, 
@@ -84,7 +100,7 @@ export default function Settings() {
     }
   }, []);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = useCallback(() => {
     setIsSaving(true);
     try {
       localStorage.setItem("aiAgentSettings", JSON.stringify(settings));
@@ -101,7 +117,47 @@ export default function Settings() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [settings, toast]);
+
+  // Memoized input handlers to prevent infinite loops
+  const handleTemperatureChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const value = e.target.value;
+      const numValue = parseFloat(value);
+      console.log("Temperature change:", value, "->", numValue);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 2) {
+        setSettings(prev => ({ ...prev, temperature: numValue }));
+      }
+    } catch (error) {
+      console.error("Temperature change error:", error);
+    }
+  }, []);
+
+  const handleMaxTokensChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const value = e.target.value;
+      const numValue = parseInt(value);
+      console.log("MaxTokens change:", value, "->", numValue);
+      if (!isNaN(numValue) && numValue >= 100 && numValue <= 4000) {
+        setSettings(prev => ({ ...prev, maxTokens: numValue }));
+      }
+    } catch (error) {
+      console.error("MaxTokens change error:", error);
+    }
+  }, []);
+
+  const handleMaxTicketsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const value = e.target.value;
+      const numValue = parseInt(value);
+      console.log("MaxTickets change:", value, "->", numValue);
+      if (!isNaN(numValue) && numValue >= 1 && numValue <= 50) {
+        setSettings(prev => ({ ...prev, maxTicketsDisplay: numValue }));
+      }
+    } catch (error) {
+      console.error("MaxTickets change error:", error);
+    }
+  }, []);
 
   const handleTestConnection = async () => {
     if (!settings.openaiApiKey.trim()) {
@@ -188,8 +244,33 @@ export default function Settings() {
     }
   };
 
+  // Emergency check for infinite loop
+  if (debugInfo.renderCount > 100) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error: Infinite Loop Detected</h2>
+        <p className="text-gray-700 mb-4">
+          The settings page has rendered {debugInfo.renderCount} times, indicating an infinite loop.
+        </p>
+        <Button 
+          onClick={() => {
+            localStorage.removeItem("aiAgentSettings");
+            window.location.reload();
+          }}
+          className="bg-red-600 hover:bg-red-700"
+        >
+          Clear Settings & Refresh
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
+      {/* Debug Info */}
+      <div className="bg-yellow-50 p-3 rounded-lg text-sm">
+        <strong>Debug:</strong> Render count: {debugInfo.renderCount} | Last update: {new Date(debugInfo.lastUpdate).toLocaleTimeString()}
+      </div>
       {/* OpenAI Configuration */}
       <Card>
         <CardHeader>
@@ -238,13 +319,7 @@ export default function Settings() {
                 max="2"
                 step="0.1"
                 value={settings.temperature}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 2) {
-                    setSettings(prev => ({ ...prev, temperature: numValue }));
-                  }
-                }}
+                onChange={handleTemperatureChange}
               />
             </div>
           </div>
@@ -257,13 +332,7 @@ export default function Settings() {
               min="100"
               max="4000"
               value={settings.maxTokens}
-              onChange={(e) => {
-                const value = e.target.value;
-                const numValue = parseInt(value);
-                if (!isNaN(numValue) && numValue >= 100 && numValue <= 4000) {
-                  setSettings(prev => ({ ...prev, maxTokens: numValue }));
-                }
-              }}
+              onChange={handleMaxTokensChange}
             />
           </div>
 
@@ -531,13 +600,7 @@ export default function Settings() {
               min="1"
               max="50"
               value={settings.maxTicketsDisplay}
-              onChange={(e) => {
-                const value = e.target.value;
-                const numValue = parseInt(value);
-                if (!isNaN(numValue) && numValue >= 1 && numValue <= 50) {
-                  setSettings(prev => ({ ...prev, maxTicketsDisplay: numValue }));
-                }
-              }}
+              onChange={handleMaxTicketsChange}
             />
           </div>
 
