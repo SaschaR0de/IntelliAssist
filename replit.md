@@ -6,6 +6,10 @@ This is a full-stack web application that serves as an AI-powered corporate supp
 
 ## Recent Changes
 
+- **Settings Page Stability Fix (January 2025)**: Completely resolved the infinite loop crash issue in the settings page by implementing stable state management patterns. Replaced problematic useEffect dependencies and input validation logic with controlled state updates that prevent re-render loops.
+
+- **Enhanced Loading Experience (January 2025)**: Implemented animated loading mascot throughout the application with three variants (LoadingMascot, ThinkingMascot, ProcessingMascot) to provide engaging user feedback during AI processing, data loading, and form submissions across all pages.
+
 - **Database Integration (January 2025)**: Successfully migrated from in-memory storage to PostgreSQL database using Neon serverless. Added proper database relations and initialized with default response templates. Database schema includes users, tickets, documents, response templates, and search history tables.
 
 - **Demo Customization Features (January 2025)**: Added comprehensive demo personalization capabilities including custom app titles, company branding, color schemes, user personas, and feature toggles. Settings allow for different demo modes (basic, full, advanced) with configurable UI elements and maximum ticket display limits.

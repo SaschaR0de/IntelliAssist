@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,84 +23,85 @@ import {
   Zap
 } from "lucide-react";
 
+// Default settings to prevent undefined values
+const defaultSettings = {
+  openaiApiKey: "",
+  model: "gpt-4o",
+  temperature: 0.3,
+  maxTokens: 1000,
+  enableAutoSummarization: true,
+  enableSmartSearch: true,
+  enableResponseDrafting: true,
+  defaultResponseTone: "professional",
+  customInstructions: "",
+  demoTitle: "AI Support Assistant",
+  companyName: "Demo Company",
+  demoDescription: "Intelligent support ticket management and automated response generation",
+  primaryColor: "#3B82F6",
+  accentColor: "#10B981",
+  warningColor: "#F59E0B",
+  demoMode: "full",
+  showAdvancedFeatures: true,
+  customWelcomeMessage: "Welcome to your AI-powered support dashboard",
+  maxTicketsDisplay: 10,
+  enableDemoData: false,
+  demoUserName: "Demo User",
+  demoUserRole: "Support Manager"
+};
+
 export default function Settings() {
-  const [settings, setSettings] = useState({
-    // OpenAI Settings
-    openaiApiKey: "",
-    model: "gpt-4o",
-    temperature: 0.3,
-    maxTokens: 1000,
-    enableAutoSummarization: true,
-    enableSmartSearch: true,
-    enableResponseDrafting: true,
-    defaultResponseTone: "professional",
-    customInstructions: "",
-    
-    // Demo Customization Settings
-    demoTitle: "AI Support Assistant",
-    companyName: "Demo Company",
-    demoDescription: "Intelligent support ticket management and automated response generation",
-    primaryColor: "#3B82F6",
-    accentColor: "#10B981",
-    warningColor: "#F59E0B",
-    demoMode: "full", // full, basic, advanced
-    showAdvancedFeatures: true,
-    customWelcomeMessage: "Welcome to your AI-powered support dashboard",
-    maxTicketsDisplay: 10,
-    enableDemoData: false,
-    demoUserName: "Demo User",
-    demoUserRole: "Support Manager"
-  });
+  const [settings, setSettings] = useState(defaultSettings);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({ renderCount: 0, lastUpdate: Date.now() });
+  const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Debug render counting (only tracks actual settings changes)
+  // Load settings once on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebugInfo(prev => ({ 
-        renderCount: prev.renderCount + 1, 
-        lastUpdate: Date.now() 
-      }));
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [JSON.stringify(settings)]);
-
-  useEffect(() => {
-    // Load settings from localStorage
-    try {
-      console.log("Loading settings from localStorage");
-      const savedSettings = localStorage.getItem("aiAgentSettings");
-      if (savedSettings && savedSettings.trim()) {
-        const parsed = JSON.parse(savedSettings);
-        console.log("Parsed settings:", parsed);
-        if (parsed && typeof parsed === 'object') {
-          // Ensure all required fields have valid values
-          const safeMaxTickets = parseInt(parsed?.maxTicketsDisplay);
-          const safeTemperature = parseFloat(parsed?.temperature);
-          const safeMaxTokens = parseInt(parsed?.maxTokens);
-          
-          console.log("Safe values:", { safeMaxTickets, safeTemperature, safeMaxTokens });
-          
-          setSettings(prev => ({ 
-            ...prev, 
-            ...parsed,
-            maxTicketsDisplay: !isNaN(safeMaxTickets) && safeMaxTickets >= 1 && safeMaxTickets <= 50 ? safeMaxTickets : 10,
-            temperature: !isNaN(safeTemperature) && safeTemperature >= 0 && safeTemperature <= 2 ? safeTemperature : 0.3,
-            maxTokens: !isNaN(safeMaxTokens) && safeMaxTokens >= 100 && safeMaxTokens <= 4000 ? safeMaxTokens : 1000
-          }));
+    let mounted = true;
+    
+    const loadSettings = async () => {
+      try {
+        const savedSettings = localStorage.getItem("aiAgentSettings");
+        if (savedSettings && savedSettings.trim() && mounted) {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed && typeof parsed === 'object') {
+            // Safely merge with defaults
+            const merged = { ...defaultSettings, ...parsed };
+            
+            // Validate numeric values
+            if (typeof merged.temperature === 'string') {
+              merged.temperature = parseFloat(merged.temperature) || 0.3;
+            }
+            if (typeof merged.maxTokens === 'string') {
+              merged.maxTokens = parseInt(merged.maxTokens) || 1000;
+            }
+            if (typeof merged.maxTicketsDisplay === 'string') {
+              merged.maxTicketsDisplay = parseInt(merged.maxTicketsDisplay) || 10;
+            }
+            
+            setSettings(merged);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+        localStorage.removeItem("aiAgentSettings");
+      } finally {
+        if (mounted) {
+          setIsLoaded(true);
         }
       }
-    } catch (error) {
-      console.error("Failed to parse saved settings:", error);
-      // Clear corrupted data
-      localStorage.removeItem("aiAgentSettings");
-    }
+    };
+    
+    loadSettings();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const handleSaveSettings = useCallback(() => {
+  const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
       localStorage.setItem("aiAgentSettings", JSON.stringify(settings));
@@ -117,47 +118,7 @@ export default function Settings() {
     } finally {
       setIsSaving(false);
     }
-  }, [settings, toast]);
-
-  // Memoized input handlers to prevent infinite loops
-  const handleTemperatureChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const value = e.target.value;
-      const numValue = parseFloat(value);
-      console.log("Temperature change:", value, "->", numValue);
-      if (!isNaN(numValue) && numValue >= 0 && numValue <= 2) {
-        setSettings(prev => ({ ...prev, temperature: numValue }));
-      }
-    } catch (error) {
-      console.error("Temperature change error:", error);
-    }
-  }, []);
-
-  const handleMaxTokensChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const value = e.target.value;
-      const numValue = parseInt(value);
-      console.log("MaxTokens change:", value, "->", numValue);
-      if (!isNaN(numValue) && numValue >= 100 && numValue <= 4000) {
-        setSettings(prev => ({ ...prev, maxTokens: numValue }));
-      }
-    } catch (error) {
-      console.error("MaxTokens change error:", error);
-    }
-  }, []);
-
-  const handleMaxTicketsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const value = e.target.value;
-      const numValue = parseInt(value);
-      console.log("MaxTickets change:", value, "->", numValue);
-      if (!isNaN(numValue) && numValue >= 1 && numValue <= 50) {
-        setSettings(prev => ({ ...prev, maxTicketsDisplay: numValue }));
-      }
-    } catch (error) {
-      console.error("MaxTickets change error:", error);
-    }
-  }, []);
+  };
 
   const handleTestConnection = async () => {
     if (!settings.openaiApiKey.trim()) {
@@ -173,7 +134,6 @@ export default function Settings() {
     setConnectionStatus("idle");
 
     try {
-      // Test the connection by making a simple API call
       const response = await fetch('/api/test-openai', {
         method: 'POST',
         headers: {
@@ -211,6 +171,13 @@ export default function Settings() {
     }
   };
 
+  const updateSetting = (key: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   const getConnectionStatusIcon = () => {
     switch (connectionStatus) {
       case "success":
@@ -244,33 +211,17 @@ export default function Settings() {
     }
   };
 
-  // Emergency check for infinite loop
-  if (debugInfo.renderCount > 100) {
+  if (!isLoaded) {
     return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Error: Infinite Loop Detected</h2>
-        <p className="text-gray-700 mb-4">
-          The settings page has rendered {debugInfo.renderCount} times, indicating an infinite loop.
-        </p>
-        <Button 
-          onClick={() => {
-            localStorage.removeItem("aiAgentSettings");
-            window.location.reload();
-          }}
-          className="bg-red-600 hover:bg-red-700"
-        >
-          Clear Settings & Refresh
-        </Button>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-corporate-primary" />
+        <span className="ml-2 text-gray-600">Loading settings...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      {/* Debug Info */}
-      <div className="bg-yellow-50 p-3 rounded-lg text-sm">
-        <strong>Debug:</strong> Render count: {debugInfo.renderCount} | Last update: {new Date(debugInfo.lastUpdate).toLocaleTimeString()}
-      </div>
       {/* OpenAI Configuration */}
       <Card>
         <CardHeader>
@@ -287,7 +238,7 @@ export default function Settings() {
               type="password"
               placeholder="sk-..."
               value={settings.openaiApiKey}
-              onChange={(e) => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
+              onChange={(e) => updateSetting("openaiApiKey", e.target.value)}
               className="font-mono"
             />
             <p className="text-xs text-gray-500">
@@ -298,7 +249,10 @@ export default function Settings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="model">Model</Label>
-              <Select value={settings.model} onValueChange={(value) => setSettings(prev => ({ ...prev, model: value }))}>
+              <Select 
+                value={settings.model} 
+                onValueChange={(value) => updateSetting("model", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
@@ -319,7 +273,12 @@ export default function Settings() {
                 max="2"
                 step="0.1"
                 value={settings.temperature}
-                onChange={handleTemperatureChange}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value) && value >= 0 && value <= 2) {
+                    updateSetting("temperature", value);
+                  }
+                }}
               />
             </div>
           </div>
@@ -332,19 +291,27 @@ export default function Settings() {
               min="100"
               max="4000"
               value={settings.maxTokens}
-              onChange={handleMaxTokensChange}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (!isNaN(value) && value >= 100 && value <= 4000) {
+                  updateSetting("maxTokens", value);
+                }
+              }}
             />
           </div>
 
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {getConnectionStatusIcon()}
-              <span className={`font-medium ${getConnectionStatusColor()}`}>
-                {getConnectionStatusText()}
-              </span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Connection Status</p>
+                <p className={`text-xs ${getConnectionStatusColor()}`}>
+                  {getConnectionStatusText()}
+                </p>
+              </div>
             </div>
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               size="sm"
               onClick={handleTestConnection}
               disabled={isTestingConnection}
@@ -360,374 +327,9 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* AI Features */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Brain className="h-5 w-5 mr-2" />
-            AI Features
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Auto-Summarization</Label>
-                <p className="text-sm text-gray-500">
-                  Automatically generate summaries for tickets and documents
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableAutoSummarization}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableAutoSummarization: checked }))}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Smart Search</Label>
-                <p className="text-sm text-gray-500">
-                  Use AI to enhance search results and provide contextual insights
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableSmartSearch}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableSmartSearch: checked }))}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Response Drafting</Label>
-                <p className="text-sm text-gray-500">
-                  Enable AI-powered customer response drafting
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableResponseDrafting}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableResponseDrafting: checked }))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Response Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Zap className="h-5 w-5 mr-2" />
-            Response Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="defaultTone">Default Response Tone</Label>
-            <Select 
-              value={settings.defaultResponseTone} 
-              onValueChange={(value) => setSettings(prev => ({ ...prev, defaultResponseTone: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select tone" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="professional">Professional</SelectItem>
-                <SelectItem value="friendly">Friendly</SelectItem>
-                <SelectItem value="formal">Formal</SelectItem>
-                <SelectItem value="casual">Casual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="customInstructions">Custom Instructions</Label>
-            <Textarea
-              id="customInstructions"
-              placeholder="Enter custom instructions for AI responses..."
-              value={settings.customInstructions}
-              onChange={(e) => setSettings(prev => ({ ...prev, customInstructions: e.target.value }))}
-              rows={4}
-            />
-            <p className="text-xs text-gray-500">
-              These instructions will be included in all AI prompts to customize the behavior
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Security & Privacy */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Shield className="h-5 w-5 mr-2" />
-            Security & Privacy
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-sm text-corporate-secondary mb-2">Data Storage</h4>
-            <p className="text-sm text-gray-600">
-              All data is stored locally in your browser. No information is sent to external servers except for AI processing.
-            </p>
-          </div>
-
-          <div className="p-4 bg-green-50 rounded-lg">
-            <h4 className="font-medium text-sm text-corporate-secondary mb-2">API Security</h4>
-            <p className="text-sm text-gray-600">
-              Your OpenAI API key is encrypted and stored locally. It's only used for AI processing and never shared.
-            </p>
-          </div>
-
-          <div className="p-4 bg-yellow-50 rounded-lg">
-            <h4 className="font-medium text-sm text-corporate-secondary mb-2">Important Notice</h4>
-            <p className="text-sm text-gray-600">
-              This is a demonstration application. Do not use real sensitive data in production environments.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Demo Customization */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Zap className="h-5 w-5 mr-2" />
-            Demo Customization
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="demoTitle">Demo Title</Label>
-              <Input
-                id="demoTitle"
-                placeholder="AI Support Assistant"
-                value={settings.demoTitle}
-                onChange={(e) => setSettings(prev => ({ ...prev, demoTitle: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                placeholder="Demo Company"
-                value={settings.companyName}
-                onChange={(e) => setSettings(prev => ({ ...prev, companyName: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="demoDescription">Demo Description</Label>
-            <Textarea
-              id="demoDescription"
-              placeholder="Intelligent support ticket management and automated response generation"
-              value={settings.demoDescription}
-              onChange={(e) => setSettings(prev => ({ ...prev, demoDescription: e.target.value }))}
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="welcomeMessage">Custom Welcome Message</Label>
-            <Textarea
-              id="welcomeMessage"
-              placeholder="Welcome to your AI-powered support dashboard"
-              value={settings.customWelcomeMessage}
-              onChange={(e) => setSettings(prev => ({ ...prev, customWelcomeMessage: e.target.value }))}
-              rows={2}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="demoUserName">Demo User Name</Label>
-              <Input
-                id="demoUserName"
-                placeholder="Demo User"
-                value={settings.demoUserName}
-                onChange={(e) => setSettings(prev => ({ ...prev, demoUserName: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="demoUserRole">Demo User Role</Label>
-              <Input
-                id="demoUserRole"
-                placeholder="Support Manager"
-                value={settings.demoUserRole}
-                onChange={(e) => setSettings(prev => ({ ...prev, demoUserRole: e.target.value }))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Demo Mode & Features */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Settings className="h-5 w-5 mr-2" />
-            Demo Mode & Features
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="demoMode">Demo Mode</Label>
-            <Select 
-              value={settings.demoMode} 
-              onValueChange={(value) => setSettings(prev => ({ ...prev, demoMode: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select demo mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basic">Basic (Essential Features)</SelectItem>
-                <SelectItem value="full">Full (All Features)</SelectItem>
-                <SelectItem value="advanced">Advanced (Expert Mode)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="maxTicketsDisplay">Maximum Tickets to Display</Label>
-            <Input
-              id="maxTicketsDisplay"
-              type="number"
-              min="1"
-              max="50"
-              value={settings.maxTicketsDisplay}
-              onChange={handleMaxTicketsChange}
-            />
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Show Advanced Features</Label>
-                <p className="text-sm text-gray-500">
-                  Display advanced AI features and detailed analytics
-                </p>
-              </div>
-              <Switch
-                checked={settings.showAdvancedFeatures}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, showAdvancedFeatures: checked }))}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Enable Demo Data</Label>
-                <p className="text-sm text-gray-500">
-                  Pre-populate the demo with sample tickets and documents
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableDemoData}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableDemoData: checked }))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Color Customization */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-corporate-secondary flex items-center">
-            <Zap className="h-5 w-5 mr-2" />
-            Color Customization
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="primaryColor">Primary Color</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  id="primaryColor"
-                  type="color"
-                  value={settings.primaryColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
-                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
-                />
-                <Input
-                  value={settings.primaryColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="accentColor">Accent Color</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  id="accentColor"
-                  type="color"
-                  value={settings.accentColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, accentColor: e.target.value }))}
-                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
-                />
-                <Input
-                  value={settings.accentColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, accentColor: e.target.value }))}
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warningColor">Warning Color</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  id="warningColor"
-                  type="color"
-                  value={settings.warningColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, warningColor: e.target.value }))}
-                  className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
-                />
-                <Input
-                  value={settings.warningColor}
-                  onChange={(e) => setSettings(prev => ({ ...prev, warningColor: e.target.value }))}
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-sm text-corporate-secondary mb-2">Color Preview</h4>
-            <div className="flex items-center space-x-4">
-              <div 
-                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
-                style={{ backgroundColor: settings.primaryColor }}
-              >
-                Primary
-              </div>
-              <div 
-                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
-                style={{ backgroundColor: settings.accentColor }}
-              >
-                Accent
-              </div>
-              <div 
-                className="w-20 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
-                style={{ backgroundColor: settings.warningColor }}
-              >
-                Warning
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Save Settings */}
+      {/* Save Settings Button */}
       <div className="flex justify-end">
-        <Button
+        <Button 
           onClick={handleSaveSettings}
           disabled={isSaving}
           className="bg-corporate-primary hover:bg-blue-600"

@@ -8,7 +8,7 @@ import Triage from "@/pages/triage";
 import Knowledge from "@/pages/knowledge";
 import Responses from "@/pages/responses";
 import Documents from "@/pages/documents";
-import Settings from "@/pages/settings-stable";
+import Settings from "@/pages/settings";
 import MainLayout from "@/components/layout/main-layout";
 import NotFound from "@/pages/not-found";
 
