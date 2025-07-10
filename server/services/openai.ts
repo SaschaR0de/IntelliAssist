@@ -1,10 +1,24 @@
 import OpenAI from "openai";
 import { initClient, monitor } from "../../lib/api-sdk/src/";
 
+// Debug logging utility
+const debugLog = (operation: string, data: any) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [OpenAI-${operation}]`, JSON.stringify(data, null, 2));
+};
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
   apiKey:
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
+});
+
+// Log initialization
+debugLog("INIT", {
+  hasApiKey: !!openai.apiKey,
+  apiKeyPrefix: openai.apiKey ? openai.apiKey.slice(0, 10) + "..." : "none",
+  model: "gpt-4o",
+  sdkVersion: "4.0"
 });
 
 initClient("0db92d0c-a8e5-47a4-befb-bbb48d2f6c86");
@@ -94,14 +108,22 @@ export interface SearchResult {
 
 export class OpenAIService {
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
+    const startTime = Date.now();
+    debugLog("ANALYZE_TICKET_START", {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100) + "...",
+      timestamp: new Date().toISOString()
+    });
+
     const monitoredFunction = monitoredTicketAnalysis(
       async (content: string): Promise<TicketAnalysis> => {
         if (!openai.apiKey) {
+          debugLog("ANALYZE_TICKET_ERROR", { error: "OpenAI API key not configured" });
           throw new Error("OpenAI API key not configured");
         }
 
         try {
-          const response = await openai.chat.completions.create({
+          const requestPayload = {
             model: "gpt-4o",
             messages: [
               {
@@ -125,12 +147,32 @@ export class OpenAIService {
             ],
             response_format: { type: "json_object" },
             temperature: 0.3,
+          };
+
+          debugLog("ANALYZE_TICKET_REQUEST", {
+            model: requestPayload.model,
+            temperature: requestPayload.temperature,
+            messagesCount: requestPayload.messages.length,
+            systemPromptLength: requestPayload.messages[0].content.length,
+            userContentLength: requestPayload.messages[1].content.length
+          });
+
+          const response = await openai.chat.completions.create(requestPayload);
+
+          debugLog("ANALYZE_TICKET_RESPONSE", {
+            id: response.id,
+            model: response.model,
+            usage: response.usage,
+            finishReason: response.choices[0].finish_reason,
+            responseLength: response.choices[0].message.content?.length || 0,
+            duration: Date.now() - startTime
           });
 
           const analysis = JSON.parse(
             response.choices[0].message.content || "{}",
           );
-          return {
+          
+          const result = {
             summary: analysis.summary || "Unable to analyze ticket",
             priority: analysis.priority || "medium",
             category: analysis.category || "general",
@@ -140,7 +182,19 @@ export class OpenAIService {
             estimatedResolutionTime:
               analysis.estimatedResolutionTime || "1-2 days",
           };
+
+          debugLog("ANALYZE_TICKET_SUCCESS", {
+            result,
+            totalDuration: Date.now() - startTime
+          });
+
+          return result;
         } catch (error) {
+          debugLog("ANALYZE_TICKET_ERROR", {
+            error: error.message,
+            stack: error.stack,
+            duration: Date.now() - startTime
+          });
           throw new Error(`Failed to analyze ticket: ${error.message}`);
         }
       },
@@ -309,9 +363,17 @@ export class OpenAIService {
     query: string,
     documents: any[],
   ): Promise<SearchResult[]> {
+    const startTime = Date.now();
+    debugLog("SEARCH_KNOWLEDGE_START", {
+      query,
+      documentsCount: documents.length,
+      timestamp: new Date().toISOString()
+    });
+
     const monitoredFunction = monitoredSearchKnowledge(
       async (query: string, documents: any[]): Promise<SearchResult[]> => {
         if (!openai.apiKey) {
+          debugLog("SEARCH_KNOWLEDGE_ERROR", { error: "OpenAI API key not configured" });
           throw new Error("OpenAI API key not configured");
         }
 
@@ -354,7 +416,22 @@ export class OpenAIService {
             }))
             .sort((a, b) => b.searchScore - a.searchScore);
 
+          debugLog("SEARCH_KNOWLEDGE_FILTERING", {
+            totalDocs: documents.length,
+            relevantDocs: relevantDocs.length,
+            topScores: relevantDocs.slice(0, 3).map(doc => ({
+              title: doc.title,
+              score: doc.searchScore
+            })),
+            filteringTime: Date.now() - startTime
+          });
+
           if (relevantDocs.length === 0) {
+            debugLog("SEARCH_KNOWLEDGE_NO_RESULTS", { 
+              query, 
+              totalDocs: documents.length,
+              duration: Date.now() - startTime 
+            });
             return [];
           }
 
