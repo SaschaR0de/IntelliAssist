@@ -69,7 +69,8 @@ export default function Responses() {
 
   const draftResponseMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/draft-response", data);
+      const response = await apiRequest("POST", "/api/draft-response", data);
+      return response.json();
     },
     onSuccess: (data) => {
       console.log("Draft response received:", data);
