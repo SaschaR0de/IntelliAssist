@@ -11,7 +11,8 @@ export type MonitorPayload = {
   errorMessage?: string;
   stackTrace?: string;
   metadata?: Record<string, any>;
-
+  tokens?: number;
+  requestTime?: number;
   environment?: string;
   version?: string;
 };

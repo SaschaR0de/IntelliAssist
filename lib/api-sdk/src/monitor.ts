@@ -257,6 +257,9 @@ export function monitor<TArgs extends any[], TResult>(
                 timeout: options.timeout,
                 priority: "high", // Errors always get high priority
               });
+              if (config.debug) {
+                console.log("payload", payload);
+              }
             }
           }, "error monitoring");
         } else {
@@ -321,6 +324,9 @@ export function monitor<TArgs extends any[], TResult>(
               timeout: options.timeout,
               priority: options.priority || "normal",
             });
+            if (config.debug) {
+              console.log("payload", payload);
+            }
           }, "success monitoring");
         }
       }
