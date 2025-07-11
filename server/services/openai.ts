@@ -13,14 +13,6 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
 });
 
-// Log initialization
-debugLog("INIT", {
-  hasApiKey: !!openai.apiKey,
-  apiKeyPrefix: openai.apiKey ? openai.apiKey.slice(0, 10) + "..." : "none",
-  model: "gpt-4o",
-  sdkVersion: "4.0"
-});
-
 initClient("0db92d0c-a8e5-47a4-befb-bbb48d2f6c86");
 
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
@@ -108,13 +100,6 @@ export interface SearchResult {
 
 export class OpenAIService {
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
-    const startTime = Date.now();
-    debugLog("ANALYZE_TICKET_START", {
-      contentLength: content.length,
-      contentPreview: content.substring(0, 100) + "...",
-      timestamp: new Date().toISOString()
-    });
-
     const monitoredFunction = monitoredTicketAnalysis(
       async (content: string): Promise<TicketAnalysis> => {
         if (!openai.apiKey) {
@@ -123,7 +108,7 @@ export class OpenAIService {
         }
 
         try {
-          const requestPayload = {
+          const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
               {
@@ -147,25 +132,6 @@ export class OpenAIService {
             ],
             response_format: { type: "json_object" },
             temperature: 0.3,
-          };
-
-          debugLog("ANALYZE_TICKET_REQUEST", {
-            model: requestPayload.model,
-            temperature: requestPayload.temperature,
-            messagesCount: requestPayload.messages.length,
-            systemPromptLength: requestPayload.messages[0].content.length,
-            userContentLength: requestPayload.messages[1].content.length
-          });
-
-          const response = await openai.chat.completions.create(requestPayload);
-
-          debugLog("ANALYZE_TICKET_RESPONSE", {
-            id: response.id,
-            model: response.model,
-            usage: response.usage,
-            finishReason: response.choices[0].finish_reason,
-            responseLength: response.choices[0].message.content?.length || 0,
-            duration: Date.now() - startTime
           });
 
           const analysis = JSON.parse(
@@ -183,19 +149,10 @@ export class OpenAIService {
               analysis.estimatedResolutionTime || "1-2 days",
           };
 
-          debugLog("ANALYZE_TICKET_SUCCESS", {
-            result,
-            totalDuration: Date.now() - startTime
-          });
 
           return result;
         } catch (error) {
-          debugLog("ANALYZE_TICKET_ERROR", {
-            error: error.message,
-            stack: error.stack,
-            duration: Date.now() - startTime
-          });
-          throw new Error(`Failed to analyze ticket: ${error.message}`);
+          throw new Error(`Failed to analyze ticket: ${error}`);
         }
       },
     );
@@ -286,7 +243,7 @@ export class OpenAIService {
             searchableTerms: summary.searchableTerms || [],
           };
         } catch (error) {
-          throw new Error(`Failed to analyze document: ${error.message}`);
+          throw new Error(`Failed to analyze document: ${error}`);
         }
       },
     );
@@ -351,7 +308,7 @@ export class OpenAIService {
             suggestions: draft.suggestions || [],
           };
         } catch (error) {
-          throw new Error(`Failed to draft response: ${error.message}`);
+          throw new Error(`Failed to draft response: ${error}`);
         }
       },
     );
@@ -363,13 +320,6 @@ export class OpenAIService {
     query: string,
     documents: any[],
   ): Promise<SearchResult[]> {
-    const startTime = Date.now();
-    debugLog("SEARCH_KNOWLEDGE_START", {
-      query,
-      documentsCount: documents.length,
-      timestamp: new Date().toISOString()
-    });
-
     const monitoredFunction = monitoredSearchKnowledge(
       async (query: string, documents: any[]): Promise<SearchResult[]> => {
         if (!openai.apiKey) {
@@ -415,25 +365,6 @@ export class OpenAIService {
                   : 0),
             }))
             .sort((a, b) => b.searchScore - a.searchScore);
-
-          debugLog("SEARCH_KNOWLEDGE_FILTERING", {
-            totalDocs: documents.length,
-            relevantDocs: relevantDocs.length,
-            topScores: relevantDocs.slice(0, 3).map(doc => ({
-              title: doc.title,
-              score: doc.searchScore
-            })),
-            filteringTime: Date.now() - startTime
-          });
-
-          if (relevantDocs.length === 0) {
-            debugLog("SEARCH_KNOWLEDGE_NO_RESULTS", { 
-              query, 
-              totalDocs: documents.length,
-              duration: Date.now() - startTime 
-            });
-            return [];
-          }
 
           const response = await openai.chat.completions.create({
             model: "gpt-4o",
@@ -484,7 +415,7 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
           );
           return searchResults.results || [];
         } catch (error) {
-          throw new Error(`Failed to search knowledge: ${error.message}`);
+          throw new Error(`Failed to search knowledge: ${error}`);
         }
       },
     );
