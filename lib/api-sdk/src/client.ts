@@ -142,7 +142,7 @@ async function makeAPICall(
       ),
       signal: controller.signal,
     });
-
+    console.log("body", JSON.stringify(payload));
     clearTimeout(timeoutId);
 
     if (!response.ok) {
