@@ -1,5 +1,6 @@
 import { sendToAPI, getConfig } from "./client";
 import type { MonitorOptions, Middleware } from "./types";
+import { toApiString } from "./utils";
 
 // Global middleware registry
 const middlewares: Middleware<any, any>[] = [];
@@ -308,18 +309,20 @@ export function monitor<TArgs extends any[], TResult>(
               environment: config.environment,
               version: config.version,
             };
+
 */
-            const payload = {
-              prompt: options.sanitize
-                ? String(
-                    sanitizeData(captureResult.input, config.sanitizePatterns),
-                  )
-                : String(captureResult.input),
-              response: options.sanitize
-                ? String(
-                    sanitizeData(captureResult.output, config.sanitizePatterns),
-                  )
-                : String(captureResult.output),
+
+const prompt = options.sanitize
+              ? sanitizeData(captureResult.input, config.sanitizePatterns)
+              : captureResult.input;
+            const response = options.sanitize
+              ? sanitizeData(captureResult.output, config.sanitizePatterns)
+              : captureResult.output;
+
+              const payload = {
+              prompt: toApiString(prompt),
+              response: toApiString(response),
+
               userId: config.userId,
               chatId: config.chatId,
               tokens: 0,
