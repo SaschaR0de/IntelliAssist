@@ -1,12 +1,6 @@
 import OpenAI from "openai";
 import { initClient, monitor } from "../../lib/api-sdk/src/";
 
-// Debug logging utility
-const debugLog = (operation: string, data: any) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [OpenAI-${operation}]`, JSON.stringify(data, null, 2));
-};
-
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
   apiKey:
@@ -103,7 +97,6 @@ export class OpenAIService {
     const monitoredFunction = monitoredTicketAnalysis(
       async (content: string): Promise<TicketAnalysis> => {
         if (!openai.apiKey) {
-          debugLog("ANALYZE_TICKET_ERROR", { error: "OpenAI API key not configured" });
           throw new Error("OpenAI API key not configured");
         }
 
@@ -323,7 +316,6 @@ export class OpenAIService {
     const monitoredFunction = monitoredSearchKnowledge(
       async (query: string, documents: any[]): Promise<SearchResult[]> => {
         if (!openai.apiKey) {
-          debugLog("SEARCH_KNOWLEDGE_ERROR", { error: "OpenAI API key not configured" });
           throw new Error("OpenAI API key not configured");
         }
 
