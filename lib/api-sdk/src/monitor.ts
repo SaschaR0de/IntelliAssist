@@ -312,14 +312,14 @@ export function monitor<TArgs extends any[], TResult>(
 
 */
 
-const prompt = options.sanitize
+            const prompt = options.sanitize
               ? sanitizeData(captureResult.input, config.sanitizePatterns)
               : captureResult.input;
             const response = options.sanitize
               ? sanitizeData(captureResult.output, config.sanitizePatterns)
               : captureResult.output;
 
-              const payload = {
+            const payload = {
               prompt: toApiString(prompt),
               response: toApiString(response),
 
