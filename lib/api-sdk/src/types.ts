@@ -2,11 +2,11 @@
 export type MonitorPayload = {
   userId: string;
   chatId: string;
-  name: string;
+  name?: string;
   prompt: string;
   response: string;
-  durationMs: number;
-  timestamp: string;
+  durationMs?: number;
+  timestamp?: string;
   error?: boolean;
   errorMessage?: string;
   stackTrace?: string;

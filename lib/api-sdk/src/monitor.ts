@@ -118,7 +118,7 @@ function safeMonitoringOperation(
     // Call global error handler if configured
     if (config.onError) {
       try {
-        config.onError(error);
+        config.onError(error as Error);
       } catch (handlerError) {
         if (config.debug) {
           console.warn(
@@ -215,7 +215,7 @@ export function monitor<TArgs extends any[], TResult>(
             if (options.onError) {
               const errorResult = options.onError(functionError, processedArgs);
               const errorInfo = createErrorInfo(functionError);
-
+/** 
               const payload = {
                 name: options.name,
                 prompt: options.sanitize
@@ -239,7 +239,19 @@ export function monitor<TArgs extends any[], TResult>(
                 environment: config.environment,
                 version: config.version,
               };
-
+*/
+              const payload = {
+                prompt: options.sanitize
+                  ? sanitizeData(errorResult.input, config.sanitizePatterns)
+                  : errorResult.input,
+                response: options.sanitize
+                  ? sanitizeData(errorResult.output, config.sanitizePatterns)
+                  : errorResult.output,
+                userId: config.userId,
+                chatId: config.chatId,
+                tokens: 0,
+                requestTime: Number(Date.now() - start),
+              };
               await sendToAPI(payload, {
                 retries: options.retries,
                 timeout: options.timeout,
@@ -268,7 +280,7 @@ export function monitor<TArgs extends any[], TResult>(
               args: processedArgs,
               result,
             });
-
+/**
             const payload = {
               name: options.name,
               prompt: options.sanitize
@@ -290,7 +302,19 @@ export function monitor<TArgs extends any[], TResult>(
               environment: config.environment,
               version: config.version,
             };
-
+*/
+            const payload = {
+              prompt: options.sanitize
+                ? sanitizeData(captureResult.input, config.sanitizePatterns)
+                : captureResult.input,
+              response: options.sanitize
+                ? sanitizeData(captureResult.output, config.sanitizePatterns)
+                : captureResult.output,
+              userId: config.userId,
+              chatId: config.chatId,
+              tokens: 0,
+              requestTime: Number(Date.now() - start),
+            };
             // Send to API (with batching and retry logic handled in client)
             await sendToAPI(payload, {
               retries: options.retries,
