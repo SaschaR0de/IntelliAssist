@@ -312,7 +312,7 @@ export async function sendToAPI(
     }
     return;
   }
-
+/** 
   const batchItem: BatchRequest = {
     id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     payload,
@@ -330,6 +330,8 @@ export async function sendToAPI(
   } else {
     scheduleBatchProcessing();
   }
+    */
+    await makeAPICall(payload);
 }
 
 // Utility functions for management
