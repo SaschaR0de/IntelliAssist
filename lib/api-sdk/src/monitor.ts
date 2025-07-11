@@ -215,7 +215,7 @@ export function monitor<TArgs extends any[], TResult>(
             if (options.onError) {
               const errorResult = options.onError(functionError, processedArgs);
               const errorInfo = createErrorInfo(functionError);
-/** 
+              /** 
               const payload = {
                 name: options.name,
                 prompt: options.sanitize
@@ -286,7 +286,7 @@ export function monitor<TArgs extends any[], TResult>(
               args: processedArgs,
               result,
             });
-/**
+            /**
             const payload = {
               name: options.name,
               prompt: options.sanitize
@@ -311,11 +311,15 @@ export function monitor<TArgs extends any[], TResult>(
 */
             const payload = {
               prompt: options.sanitize
-                ? sanitizeData(captureResult.input, config.sanitizePatterns)
-                : captureResult.input,
+                ? String(
+                    sanitizeData(captureResult.input, config.sanitizePatterns),
+                  )
+                : String(captureResult.input),
               response: options.sanitize
-                ? sanitizeData(captureResult.output, config.sanitizePatterns)
-                : captureResult.output,
+                ? String(
+                    sanitizeData(captureResult.output, config.sanitizePatterns),
+                  )
+                : String(captureResult.output),
               userId: config.userId,
               chatId: config.chatId,
               tokens: 0,
