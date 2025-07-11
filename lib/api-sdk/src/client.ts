@@ -15,6 +15,8 @@ let config: SDKConfig = {
   enableLocalStorage: true,
   localStorageKey: "olakai-sdk-queue",
   maxLocalStorageSize: 1000000, // 1MB
+  userId: "test-user",
+  chatId: "test-chat",
   debug: true,
 };
 
