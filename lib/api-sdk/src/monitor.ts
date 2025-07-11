@@ -1,6 +1,5 @@
 import { sendToAPI, getConfig } from "./client";
 import type { MonitorOptions, Middleware } from "./types";
-import { toApiString } from "./utils";
 
 // Global middleware registry
 const middlewares: Middleware<any, any>[] = [];
@@ -138,9 +137,32 @@ function safeMonitoringOperation(
  * @param fn - The function to monitor
  * @returns The monitored function
  */
+// Overload 1: curried
 export function monitor<TArgs extends any[], TResult>(
   options: MonitorOptions<TArgs, TResult>,
-) {
+): (
+  fn: (...args: TArgs) => Promise<TResult>,
+) => (...args: TArgs) => Promise<TResult>;
+
+// Overload 2: direct
+export function monitor<TArgs extends any[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
+  options: MonitorOptions<TArgs, TResult>,
+): (...args: TArgs) => Promise<TResult>;
+
+// Implementation
+export function monitor<TArgs extends any[], TResult>(
+  arg1: any,
+  arg2?: any,
+): any {
+  if (typeof arg1 === "function" && arg2) {
+    // Direct form: monitor(fn, options)
+    const fn = arg1 as (...args: TArgs) => Promise<TResult>;
+    const options = arg2 as MonitorOptions<TArgs, TResult>;
+    return monitor(options)(fn);
+  }
+  // Curried form: monitor(options)(fn)
+  const options = arg1 as MonitorOptions<TArgs, TResult>;
   return (fn: (...args: TArgs) => Promise<TResult>) => {
     return async (...args: TArgs): Promise<TResult> => {
       // Check if we should monitor this call - if not, just execute the function
@@ -216,7 +238,7 @@ export function monitor<TArgs extends any[], TResult>(
             if (options.onError) {
               const errorResult = options.onError(functionError, processedArgs);
               const errorInfo = createErrorInfo(functionError);
-              /** 
+
               const payload = {
                 name: options.name,
                 prompt: options.sanitize
@@ -240,30 +262,12 @@ export function monitor<TArgs extends any[], TResult>(
                 environment: config.environment,
                 version: config.version,
               };
-*/
-              const payload = {
-                prompt: options.sanitize
-                  ? sanitizeData(errorResult.input, config.sanitizePatterns)
-                  : errorResult.input,
-                response: options.sanitize
-                  ? sanitizeData(errorResult.output, config.sanitizePatterns)
-                  : errorResult.output,
-                userId: config.userId,
-                chatId: config.chatId,
-                tokens: 0,
-                requestTime: Number(Date.now() - start),
-              };
-              if (config.debug) {
-                console.log("payload", payload);
-              }
+
               await sendToAPI(payload, {
                 retries: options.retries,
                 timeout: options.timeout,
                 priority: "high", // Errors always get high priority
               });
-              if (config.debug) {
-                console.log("payload sent!");
-              }
             }
           }, "error monitoring");
         } else {
@@ -287,7 +291,7 @@ export function monitor<TArgs extends any[], TResult>(
               args: processedArgs,
               result,
             });
-            /**
+
             const payload = {
               name: options.name,
               prompt: options.sanitize
@@ -310,36 +314,12 @@ export function monitor<TArgs extends any[], TResult>(
               version: config.version,
             };
 
-*/
-
-            const prompt = options.sanitize
-              ? sanitizeData(captureResult.input, config.sanitizePatterns)
-              : captureResult.input;
-            const response = options.sanitize
-              ? sanitizeData(captureResult.output, config.sanitizePatterns)
-              : captureResult.output;
-
-            const payload = {
-              prompt: toApiString(prompt),
-              response: toApiString(response),
-
-              userId: config.userId,
-              chatId: config.chatId,
-              tokens: 0,
-              requestTime: Number(Date.now() - start),
-            };
-            if (config.debug) {
-              console.log("payload", payload);
-            }
             // Send to API (with batching and retry logic handled in client)
             await sendToAPI(payload, {
               retries: options.retries,
               timeout: options.timeout,
               priority: options.priority || "normal",
             });
-            if (config.debug) {
-              console.log("payload sent!");
-            }
           }, "success monitoring");
         }
       }

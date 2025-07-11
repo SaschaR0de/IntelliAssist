@@ -432,17 +432,7 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
     documents: any[] = [],
     tickets: any[] = []
   ): Promise<ChatResponse> {
-    const startTime = Date.now();
-    debugLog("CHAT_BOT_START", {
-      userMessage,
-      historyLength: conversationHistory.length,
-      documentsCount: documents.length,
-      ticketsCount: tickets.length,
-      timestamp: new Date().toISOString()
-    });
-
     if (!openai.apiKey) {
-      debugLog("CHAT_BOT_ERROR", { error: "OpenAI API key not configured" });
       throw new Error("OpenAI API key not configured");
     }
 
@@ -459,12 +449,6 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
         ticket.description.toLowerCase().includes(userMessage.toLowerCase()) ||
         ticket.aiSummary?.toLowerCase().includes(userMessage.toLowerCase())
       ).slice(0, 3);
-
-      debugLog("CHAT_BOT_CONTEXT", {
-        relevantDocs: relevantDocs.length,
-        relevantTickets: relevantTickets.length,
-        contextPreparationTime: Date.now() - startTime
-      });
 
       // Build context from relevant documents and tickets
       let contextInfo = "";
@@ -521,26 +505,12 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
         max_tokens: 1000
       };
 
-      debugLog("CHAT_BOT_REQUEST", {
-        model: requestPayload.model,
-        temperature: requestPayload.temperature,
-        maxTokens: requestPayload.max_tokens,
-        messagesCount: messages.length,
-        totalContextLength: messages.reduce((sum, msg) => sum + msg.content.length, 0)
+      // Fix: Ensure messages are typed correctly for OpenAI API
+      const response = await openai.chat.completions.create({
+        ...requestPayload,
+        messages: messages as import("openai/resources/chat").ChatCompletionMessageParam[]
       });
-
-      const response = await openai.chat.completions.create(requestPayload);
-
-      debugLog("CHAT_BOT_RESPONSE", {
-        id: response.id,
-        model: response.model,
-        usage: response.usage,
-        finishReason: response.choices[0].finish_reason,
-        responseLength: response.choices[0].message.content?.length || 0,
-        duration: Date.now() - startTime
-      });
-
-      const botResponse = response.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
+      const botResponse = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
       
       // Calculate confidence based on context relevance and response quality
       const confidence = Math.min(
@@ -570,22 +540,9 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
         actionTaken: suggestsAction ? "action_suggested" : undefined
       };
 
-      debugLog("CHAT_BOT_SUCCESS", {
-        confidence,
-        sourcesCount: sources.length,
-        actionTaken: result.actionTaken,
-        totalDuration: Date.now() - startTime
-      });
-
       return result;
     } catch (error) {
-      debugLog("CHAT_BOT_ERROR", {
-        userMessage,
-        error: error.message,
-        stack: error.stack,
-        duration: Date.now() - startTime
-      });
-      throw new Error(`Failed to process chat message: ${error.message}`);
+      throw new Error(`Failed to process chat message: ${error}`);
     }
   }
 }
