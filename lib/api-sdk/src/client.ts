@@ -39,8 +39,10 @@ if (typeof window !== "undefined") {
 export function initClient(keyOrConfig: string | SDKConfig) {
   if (typeof keyOrConfig === "string") {
     config.apiKey = keyOrConfig;
+    console.log("config", config);
   } else {
     config = { ...config, ...keyOrConfig };
+    console.log("config", config);
   }
 
   // Load any persisted queue from localStorage
