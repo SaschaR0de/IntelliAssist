@@ -91,6 +91,13 @@ export interface SearchResult {
   context: string;
 }
 
+export interface ChatResponse {
+  response: string;
+  confidence: number;
+  sources: string[];
+  actionTaken?: string;
+}
+
 export class OpenAIService {
 
   constructor() {
@@ -417,6 +424,169 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
     );
 
     return monitoredFunction(query, documents);
+  }
+
+  async chatWithBot(
+    userMessage: string,
+    conversationHistory: { role: string; content: string }[] = [],
+    documents: any[] = [],
+    tickets: any[] = []
+  ): Promise<ChatResponse> {
+    const startTime = Date.now();
+    debugLog("CHAT_BOT_START", {
+      userMessage,
+      historyLength: conversationHistory.length,
+      documentsCount: documents.length,
+      ticketsCount: tickets.length,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!openai.apiKey) {
+      debugLog("CHAT_BOT_ERROR", { error: "OpenAI API key not configured" });
+      throw new Error("OpenAI API key not configured");
+    }
+
+    try {
+      // Search for relevant documents and tickets
+      const relevantDocs = documents.filter(doc => 
+        doc.content.toLowerCase().includes(userMessage.toLowerCase()) ||
+        doc.title.toLowerCase().includes(userMessage.toLowerCase()) ||
+        doc.aiSummary?.toLowerCase().includes(userMessage.toLowerCase())
+      ).slice(0, 3);
+
+      const relevantTickets = tickets.filter(ticket => 
+        ticket.title.toLowerCase().includes(userMessage.toLowerCase()) ||
+        ticket.description.toLowerCase().includes(userMessage.toLowerCase()) ||
+        ticket.aiSummary?.toLowerCase().includes(userMessage.toLowerCase())
+      ).slice(0, 3);
+
+      debugLog("CHAT_BOT_CONTEXT", {
+        relevantDocs: relevantDocs.length,
+        relevantTickets: relevantTickets.length,
+        contextPreparationTime: Date.now() - startTime
+      });
+
+      // Build context from relevant documents and tickets
+      let contextInfo = "";
+      if (relevantDocs.length > 0) {
+        contextInfo += "\n\nRelevant Documentation:\n";
+        relevantDocs.forEach(doc => {
+          contextInfo += `- ${doc.title}: ${doc.aiSummary || doc.content.substring(0, 200)}...\n`;
+        });
+      }
+
+      if (relevantTickets.length > 0) {
+        contextInfo += "\n\nRelevant Tickets:\n";
+        relevantTickets.forEach(ticket => {
+          contextInfo += `- ${ticket.title} (${ticket.priority}): ${ticket.aiSummary || ticket.description.substring(0, 200)}...\n`;
+        });
+      }
+
+      const messages = [
+        {
+          role: "system",
+          content: `You are an intelligent AI support assistant for a corporate help desk system. 
+          
+          Your capabilities include:
+          - Answering questions about documentation and knowledge base
+          - Helping with ticket management and support issues
+          - Providing guidance on company policies and procedures
+          - Offering troubleshooting assistance
+          - Escalating complex issues when needed
+          
+          Guidelines:
+          - Be helpful, professional, and empathetic
+          - Provide accurate information based on available context
+          - If you don't know something, say so and offer to escalate
+          - Use bullet points for step-by-step instructions
+          - Keep responses concise but comprehensive
+          - Include relevant sources when referencing documentation
+          
+          Available context:${contextInfo}
+          
+          If you need to perform an action (like creating a ticket, searching documents, etc.), 
+          mention this in your response and indicate what action would be helpful.`
+        },
+        ...conversationHistory,
+        {
+          role: "user",
+          content: userMessage
+        }
+      ];
+
+      const requestPayload = {
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages,
+        temperature: 0.7,
+        max_tokens: 1000
+      };
+
+      debugLog("CHAT_BOT_REQUEST", {
+        model: requestPayload.model,
+        temperature: requestPayload.temperature,
+        maxTokens: requestPayload.max_tokens,
+        messagesCount: messages.length,
+        totalContextLength: messages.reduce((sum, msg) => sum + msg.content.length, 0)
+      });
+
+      const response = await openai.chat.completions.create(requestPayload);
+
+      debugLog("CHAT_BOT_RESPONSE", {
+        id: response.id,
+        model: response.model,
+        usage: response.usage,
+        finishReason: response.choices[0].finish_reason,
+        responseLength: response.choices[0].message.content?.length || 0,
+        duration: Date.now() - startTime
+      });
+
+      const botResponse = response.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
+      
+      // Calculate confidence based on context relevance and response quality
+      const confidence = Math.min(
+        0.95,
+        0.6 + 
+        (relevantDocs.length > 0 ? 0.2 : 0) + 
+        (relevantTickets.length > 0 ? 0.1 : 0) + 
+        (botResponse.length > 50 ? 0.05 : 0)
+      );
+
+      // Extract sources
+      const sources = [
+        ...relevantDocs.map(doc => doc.title),
+        ...relevantTickets.map(ticket => ticket.title)
+      ];
+
+      // Check if bot suggests any actions
+      const suggestsAction = botResponse.toLowerCase().includes('create') || 
+                           botResponse.toLowerCase().includes('escalate') ||
+                           botResponse.toLowerCase().includes('search') ||
+                           botResponse.toLowerCase().includes('update');
+
+      const result: ChatResponse = {
+        response: botResponse,
+        confidence,
+        sources,
+        actionTaken: suggestsAction ? "action_suggested" : undefined
+      };
+
+      debugLog("CHAT_BOT_SUCCESS", {
+        confidence,
+        sourcesCount: sources.length,
+        actionTaken: result.actionTaken,
+        totalDuration: Date.now() - startTime
+      });
+
+      return result;
+    } catch (error) {
+      debugLog("CHAT_BOT_ERROR", {
+        userMessage,
+        error: error.message,
+        stack: error.stack,
+        duration: Date.now() - startTime
+      });
+      throw new Error(`Failed to process chat message: ${error.message}`);
+    }
   }
 }
 

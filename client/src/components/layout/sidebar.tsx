@@ -17,6 +17,7 @@ const navItems = [
   { path: "/knowledge", label: "Knowledge Search", icon: Search },
   { path: "/responses", label: "Draft Responses", icon: Edit },
   { path: "/documents", label: "Documents", icon: FileText },
+  { path: "/chat", label: "AI Chat", icon: Bot },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 

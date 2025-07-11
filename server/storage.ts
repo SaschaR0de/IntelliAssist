@@ -4,6 +4,7 @@ import {
   documents, 
   responseTemplates, 
   searchHistory,
+  chatConversations,
   type User, 
   type InsertUser,
   type Ticket,
@@ -13,7 +14,9 @@ import {
   type ResponseTemplate,
   type InsertResponseTemplate,
   type SearchHistory,
-  type InsertSearchHistory
+  type InsertSearchHistory,
+  type ChatConversation,
+  type InsertChatConversation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, sql } from "drizzle-orm";
@@ -50,6 +53,10 @@ export interface IStorage {
   getSearchHistory(): Promise<SearchHistory[]>;
   createSearchHistory(search: InsertSearchHistory): Promise<SearchHistory>;
 
+  // Chat conversation methods
+  getChatConversations(sessionId?: string): Promise<ChatConversation[]>;
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+
   // Stats methods
   getStats(): Promise<{
     ticketsProcessed: number;
@@ -65,6 +72,7 @@ export class MemStorage implements IStorage {
   private documents: Map<number, Document>;
   private responseTemplates: Map<number, ResponseTemplate>;
   private searchHistory: Map<number, SearchHistory>;
+  private chatConversations: Map<number, ChatConversation>;
   private currentId: number;
 
   constructor() {
@@ -73,6 +81,7 @@ export class MemStorage implements IStorage {
     this.documents = new Map();
     this.responseTemplates = new Map();
     this.searchHistory = new Map();
+    this.chatConversations = new Map();
     this.currentId = 1;
 
     // Initialize with some default response templates
@@ -274,6 +283,26 @@ export class MemStorage implements IStorage {
     return search;
   }
 
+  // Chat conversation methods
+  async getChatConversations(sessionId?: string): Promise<ChatConversation[]> {
+    const conversations = Array.from(this.chatConversations.values());
+    if (sessionId) {
+      return conversations.filter(conv => conv.sessionId === sessionId);
+    }
+    return conversations;
+  }
+
+  async createChatConversation(insertConversation: InsertChatConversation): Promise<ChatConversation> {
+    const id = this.currentId++;
+    const conversation: ChatConversation = { 
+      ...insertConversation, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.chatConversations.set(id, conversation);
+    return conversation;
+  }
+
   // Stats methods
   async getStats(): Promise<{
     ticketsProcessed: number;
@@ -425,6 +454,22 @@ export class DatabaseStorage implements IStorage {
       .values(insertSearch)
       .returning();
     return search;
+  }
+
+  // Chat conversation methods
+  async getChatConversations(sessionId?: string): Promise<ChatConversation[]> {
+    if (sessionId) {
+      return await db.select().from(chatConversations).where(eq(chatConversations.sessionId, sessionId));
+    }
+    return await db.select().from(chatConversations);
+  }
+
+  async createChatConversation(insertConversation: InsertChatConversation): Promise<ChatConversation> {
+    const [conversation] = await db
+      .insert(chatConversations)
+      .values(insertConversation)
+      .returning();
+    return conversation;
   }
 
   // Stats methods

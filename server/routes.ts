@@ -424,6 +424,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat endpoint
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, sessionId } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      // Generate session ID if not provided
+      const chatSessionId = sessionId || `session_${Date.now()}`;
+
+      // Get conversation history for context
+      const conversationHistory = await storage.getChatConversations(chatSessionId);
+      const recentHistory = conversationHistory
+        .slice(-10) // Keep last 10 messages for context
+        .map(conv => [
+          { role: "user", content: conv.userMessage },
+          { role: "assistant", content: conv.botResponse }
+        ])
+        .flat();
+
+      // Get documents and tickets for context
+      const documents = await storage.getAllDocuments();
+      const tickets = await storage.getAllTickets();
+
+      // Get AI response
+      const chatResponse = await openaiService.chatWithBot(
+        message,
+        recentHistory,
+        documents,
+        tickets
+      );
+
+      // Save conversation to storage
+      await storage.createChatConversation({
+        sessionId: chatSessionId,
+        userMessage: message,
+        botResponse: chatResponse.response,
+        confidence: Math.round(chatResponse.confidence * 100),
+        sources: chatResponse.sources,
+        actionTaken: chatResponse.actionTaken
+      });
+
+      res.json({
+        response: chatResponse.response,
+        confidence: chatResponse.confidence,
+        sources: chatResponse.sources,
+        actionTaken: chatResponse.actionTaken,
+        sessionId: chatSessionId
+      });
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: "Failed to process chat message" });
+    }
+  });
+
+  // Get chat history
+  app.get("/api/chat/history", async (req, res) => {
+    try {
+      const { sessionId } = req.query;
+      const conversations = await storage.getChatConversations(sessionId as string);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Chat history error:", error);
+      res.status(500).json({ error: "Failed to get chat history" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -9,6 +9,7 @@ import Knowledge from "@/pages/knowledge";
 import Responses from "@/pages/responses";
 import Documents from "@/pages/documents";
 import Settings from "@/pages/settings";
+import Chat from "@/pages/chat";
 import MainLayout from "@/components/layout/main-layout";
 import NotFound from "@/pages/not-found";
 
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/knowledge" component={Knowledge} />
         <Route path="/responses" component={Responses} />
         <Route path="/documents" component={Documents} />
+        <Route path="/chat" component={Chat} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

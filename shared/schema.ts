@@ -55,6 +55,17 @@ export const searchHistory = pgTable("search_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const chatConversations = pgTable("chat_conversations", {
+  id: serial("id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  userMessage: text("user_message").notNull(),
+  botResponse: text("bot_response").notNull(),
+  confidence: integer("confidence"), // 0-100
+  sources: text("sources").array(),
+  actionTaken: text("action_taken"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   tickets: many(tickets),
@@ -87,6 +98,13 @@ export const responseTemplatesRelations = relations(responseTemplates, ({ one })
 export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
   user: one(users, {
     fields: [searchHistory.id],
+    references: [users.id],
+  }),
+}));
+
+export const chatConversationsRelations = relations(chatConversations, ({ one }) => ({
+  user: one(users, {
+    fields: [chatConversations.id],
     references: [users.id],
   }),
 }));
@@ -125,6 +143,15 @@ export const insertSearchHistorySchema = createInsertSchema(searchHistory).pick(
   results: true,
 });
 
+export const insertChatConversationSchema = createInsertSchema(chatConversations).pick({
+  sessionId: true,
+  userMessage: true,
+  botResponse: true,
+  confidence: true,
+  sources: true,
+  actionTaken: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -139,3 +166,6 @@ export type InsertResponseTemplate = z.infer<typeof insertResponseTemplateSchema
 
 export type SearchHistory = typeof searchHistory.$inferSelect;
 export type InsertSearchHistory = z.infer<typeof insertSearchHistorySchema>;
+
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
