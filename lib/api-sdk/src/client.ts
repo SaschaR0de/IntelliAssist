@@ -148,6 +148,9 @@ async function makeAPICall(
     }
 
     const result = await response.json();
+    if (config.debug) {
+      console.log("result", result);
+    }
     return { success: true, ...result };
   } catch (err) {
     clearTimeout(timeoutId);
