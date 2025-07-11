@@ -282,3 +282,17 @@ export class ConfigBuilder {
 export function createConfig(): ConfigBuilder {
   return new ConfigBuilder();
 }
+
+export function toApiString(val: any): string {
+  if (typeof val === "string") return val;
+  if (val && typeof val === "object") {
+    // Option 1: key-value pairs
+    return Object.entries(val)
+      .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+      .join("; ");
+    // Option 2: JSON
+    // return JSON.stringify(val);
+  }
+  return String(val);
+}
+
