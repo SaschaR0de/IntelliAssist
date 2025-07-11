@@ -7,7 +7,7 @@ import type {
 
 let config: SDKConfig = {
   apiKey: "",
-  apiUrl: "https://staging.olakai.ai/api/monitoring/prompt", // needs to be set when we have an endpoint
+  apiUrl: "https://staging.app.olakai.ai/api/monitoring/prompt", // needs to be set when we have an endpoint
   batchSize: 10,
   batchTimeout: 5000, // 5 seconds
   retries: 3,
