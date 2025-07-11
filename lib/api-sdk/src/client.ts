@@ -11,7 +11,7 @@ let config: SDKConfig = {
   batchSize: 10,
   batchTimeout: 5000, // 5 seconds
   retries: 3,
-  timeout: 10000, // 10 seconds
+  timeout: 30000, // 15 seconds
   enableLocalStorage: true,
   localStorageKey: "olakai-sdk-queue",
   maxLocalStorageSize: 1000000, // 1MB
