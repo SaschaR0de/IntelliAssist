@@ -252,13 +252,16 @@ export function monitor<TArgs extends any[], TResult>(
                 tokens: 0,
                 requestTime: Number(Date.now() - start),
               };
+              if (config.debug) {
+                console.log("payload", payload);
+              }
               await sendToAPI(payload, {
                 retries: options.retries,
                 timeout: options.timeout,
                 priority: "high", // Errors always get high priority
               });
               if (config.debug) {
-                console.log("payload", payload);
+                console.log("payload sent!");
               }
             }
           }, "error monitoring");
@@ -318,6 +321,9 @@ export function monitor<TArgs extends any[], TResult>(
               tokens: 0,
               requestTime: Number(Date.now() - start),
             };
+            if (config.debug) {
+              console.log("payload", payload);
+            }
             // Send to API (with batching and retry logic handled in client)
             await sendToAPI(payload, {
               retries: options.retries,
@@ -325,7 +331,7 @@ export function monitor<TArgs extends any[], TResult>(
               priority: options.priority || "normal",
             });
             if (config.debug) {
-              console.log("payload", payload);
+              console.log("payload sent!");
             }
           }, "success monitoring");
         }
