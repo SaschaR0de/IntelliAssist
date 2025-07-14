@@ -18,8 +18,8 @@ let config: SDKConfig = {
   enableLocalStorage: true,
   localStorageKey: "olakai-sdk-queue",
   maxLocalStorageSize: 1000000, // 1MB
-  debug: false,
-  verbose: false,
+  debug: true,
+  verbose: true,
 };
 
 let batchQueue: BatchRequest[] = [];
