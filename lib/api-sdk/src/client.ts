@@ -9,8 +9,10 @@ const subdomain = "staging.app"; // TODO SR: make this dynamic
 const isBatchingEnabled = false;
 
 let config: SDKConfig = {
-  apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
-  apiUrl: `https://${subdomain}.olakai.ai/api/monitoring/prompt`, // needs to be set when we have an endpoint
+  // apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
+  // apiUrl: `https://${subdomain}.olakai.ai/api/monitoring/prompt`, // needs to be set when we have an endpoint
+  apiKey: "2a382cdd-61b9-424f-94fb-9adeb33b903e",
+  apiUrl: `http://localhost:3000/api/monitoring/prompt`, // needs to be set when we have an endpoint
   batchSize: 10,
   batchTimeout: 5000, // 5 seconds
   retries: 3,
