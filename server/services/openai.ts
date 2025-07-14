@@ -7,6 +7,8 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
 });
 
+initClient("0db92d0c-a8e5-47a4-befb-bbb48d2f6c86");
+
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
   name: "ticket_analysis",
   capture: ({ args, result }) => ({
