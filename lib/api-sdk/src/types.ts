@@ -1,20 +1,31 @@
 //TODO SR: See the exact API payload needed
-export type MonitorPayload = {
+
+/**export type MonitorPayload = {
   userId: string;
   chatId: string;
-  name?: string;
+  name: string;
   prompt: string;
   response: string;
-  durationMs?: number;
-  timestamp?: string;
+  durationMs: number;
+  timestamp: string;
   error?: boolean;
   errorMessage?: string;
   stackTrace?: string;
   metadata?: Record<string, any>;
-  tokens?: number;
-  requestTime?: number;
+
   environment?: string;
   version?: string;
+};
+*/
+
+export type MonitorPayload = {
+  userId: string;
+  chatId: string;
+  prompt: string;
+  response: string;
+  tokens?: number;
+  requestTime?: number;
+  errorMessage?: string;
 };
 
 /**
@@ -52,8 +63,6 @@ export type SDKConfig = {
   apiKey: string;
   apiUrl?: string;
   environment?: string;
-  userId?: string;
-  chatId?: string;
   version?: string;
   batchSize?: number;
   batchTimeout?: number;
@@ -62,9 +71,10 @@ export type SDKConfig = {
   enableLocalStorage?: boolean;
   localStorageKey?: string;
   maxLocalStorageSize?: number;
-  debug?: boolean;
+  debug: boolean;
   onError?: (error: Error) => void;
   sanitizePatterns?: RegExp[];
+  verbose: boolean;
 };
 
 export type BatchRequest = {
@@ -79,15 +89,6 @@ export type APIResponse = {
   success: boolean;
   message?: string;
   errors?: string[];
-};
-
-export type MetricsSnapshot = {
-  totalCalls: number;
-  successRate: number;
-  averageDuration: number;
-  errorRate: number;
-  lastError?: string;
-  lastErrorTime?: string;
 };
 
 export type FilterFunction<TArgs extends any[]> = (args: TArgs) => boolean;

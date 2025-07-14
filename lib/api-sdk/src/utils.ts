@@ -99,33 +99,6 @@ function isValidUrl(string: string): boolean {
   }
 }
 
-// Deep clone utility
-export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== "object") {
-    return obj;
-  }
-
-  if (obj instanceof Date) {
-    return new Date(obj.getTime()) as T;
-  }
-
-  if (obj instanceof Array) {
-    return obj.map((item) => deepClone(item)) as T;
-  }
-
-  if (typeof obj === "object") {
-    const cloned = {} as T;
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        cloned[key] = deepClone(obj[key]);
-      }
-    }
-    return cloned;
-  }
-
-  return obj;
-}
-
 // Generate unique ID
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -187,16 +160,6 @@ export class ConfigBuilder {
 
   environment(env: string): ConfigBuilder {
     this.config.environment = env;
-    return this;
-  }
-
-  userId(id: string): ConfigBuilder {
-    this.config.userId = id;
-    return this;
-  }
-
-  chatId(id: string): ConfigBuilder {
-    this.config.chatId = id;
     return this;
   }
 
@@ -272,6 +235,7 @@ export class ConfigBuilder {
       localStorageKey: "olakai-sdk-queue",
       maxLocalStorageSize: 1000000,
       debug: false,
+      verbose: false,
       sanitizePatterns: DEFAULT_SANITIZE_PATTERNS,
       ...this.config,
     } as SDKConfig;
@@ -295,4 +259,3 @@ export function toApiString(val: any): string {
   }
   return String(val);
 }
-

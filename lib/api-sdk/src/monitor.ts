@@ -1,5 +1,6 @@
 import { sendToAPI, getConfig } from "./client";
 import type { MonitorOptions, Middleware } from "./types";
+import { toApiString } from "./utils";
 
 // Global middleware registry
 const middlewares: Middleware<any, any>[] = [];
@@ -55,8 +56,15 @@ function sanitizeData(data: any, patterns?: RegExp[]): any {
   });
 
   try {
-    return JSON.parse(serialized);
+    const parsed = JSON.parse(serialized);
+    if (getConfig().verbose) {
+      console.log("[Olakai SDK] Data successfully sanitized");
+    }
+    return parsed;
   } catch {
+    if (getConfig().debug) {
+      console.warn("[Olakai SDK] Data failed to sanitize");
+    }
     return "[SANITIZED]";
   }
 }
@@ -118,7 +126,7 @@ function safeMonitoringOperation(
     // Call global error handler if configured
     if (config.onError) {
       try {
-        config.onError(error as Error);
+        config.onError(error);
       } catch (handlerError) {
         if (config.debug) {
           console.warn(
@@ -183,16 +191,12 @@ export function monitor<TArgs extends any[], TResult>(
 
       let config: any;
       let start: number;
-      let callId: string;
       let processedArgs = args;
 
       // Safely initialize monitoring data
       try {
         config = getConfig();
         start = Date.now();
-        callId = `${options.name}-${start}-${Math.random()
-          .toString(36)
-          .substr(2, 9)}`;
       } catch (error) {
         safeMonitoringOperation(() => {
           throw error;
@@ -240,27 +244,13 @@ export function monitor<TArgs extends any[], TResult>(
               const errorInfo = createErrorInfo(functionError);
 
               const payload = {
-                name: options.name,
-                prompt: options.sanitize
-                  ? sanitizeData(errorResult.input, config.sanitizePatterns)
-                  : errorResult.input,
-                response: options.sanitize
-                  ? sanitizeData(errorResult.output, config.sanitizePatterns)
-                  : errorResult.output,
-                error: true,
-                ...errorInfo,
-                durationMs: Date.now() - start,
-                timestamp: new Date().toISOString(),
-                metadata: {
-                  ...errorResult.metadata,
-                  callId,
-                  tags: options.tags,
-                  priority: options.priority || "high", // Errors get higher priority
-                },
-                chatId: config.chatId,
-                userId: config.userId,
-                environment: config.environment,
-                version: config.version,
+                prompt: "",
+                response: "",
+                errorMessage:
+                  toApiString(errorInfo.errorMessage) +
+                  toApiString(errorResult),
+                chatId: "123",
+                userId: "anonymous",
               };
 
               await sendToAPI(payload, {
@@ -291,28 +281,25 @@ export function monitor<TArgs extends any[], TResult>(
               args: processedArgs,
               result,
             });
+            const prompt = options.sanitize
+              ? sanitizeData(captureResult.input, config.sanitizePatterns)
+              : captureResult.input;
+            const response = options.sanitize
+              ? sanitizeData(captureResult.output, config.sanitizePatterns)
+              : captureResult.output;
 
             const payload = {
-              name: options.name,
-              prompt: options.sanitize
-                ? sanitizeData(captureResult.input, config.sanitizePatterns)
-                : captureResult.input,
-              response: options.sanitize
-                ? sanitizeData(captureResult.output, config.sanitizePatterns)
-                : captureResult.output,
-              durationMs: Date.now() - start,
-              timestamp: new Date().toISOString(),
-              metadata: {
-                ...captureResult.metadata,
-                callId,
-                tags: options.tags,
-                priority: options.priority || "normal",
-              },
-              chatId: config.chatId,
-              userId: config.userId,
-              environment: config.environment,
-              version: config.version,
+              prompt: toApiString(prompt),
+              response: toApiString(response),
+              chatId: "123",
+              userId: "anonymous",
+              tokens: 0,
+              requestTime: Number(Date.now() - start),
             };
+
+            if (config.verbose) {
+              console.log("[Olakai SDK] Successfully defined payload", payload);
+            }
 
             // Send to API (with batching and retry logic handled in client)
             await sendToAPI(payload, {

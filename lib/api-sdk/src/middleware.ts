@@ -1,5 +1,4 @@
 import type { Middleware } from "./types";
-import { getGlobalMetrics } from "./metrics";
 
 // Logging middleware
 export function createLoggingMiddleware<TArgs extends any[], TResult>(options: {
@@ -25,7 +24,7 @@ export function createLoggingMiddleware<TArgs extends any[], TResult>(options: {
       }
       return args;
     },
-    afterCall: async (result: TResult, args: TArgs) => {
+    afterCall: async (result: TResult, _args: TArgs) => {
       if (includeResult) {
         logger[level]("[Olakai SDK] Function completed with result:", result);
       } else {
@@ -33,39 +32,8 @@ export function createLoggingMiddleware<TArgs extends any[], TResult>(options: {
       }
       return result;
     },
-    onError: async (error: any, args: TArgs) => {
+    onError: async (error: any, _args: TArgs) => {
       logger.error("[Olakai SDK] Function failed with error:", error);
-    },
-  };
-}
-
-// Metrics collection middleware
-export function createMetricsMiddleware<TArgs extends any[], TResult>(
-  functionName: string,
-): Middleware<TArgs, TResult> {
-  let startTime: number;
-
-  return {
-    name: "metrics",
-    beforeCall: async (args: TArgs) => {
-      startTime = Date.now();
-      return args;
-    },
-    afterCall: async (result: TResult, args: TArgs) => {
-      const duration = Date.now() - startTime;
-      getGlobalMetrics().recordCall(functionName, duration, true);
-      return result;
-    },
-    onError: async (error: any, args: TArgs) => {
-      const duration = Date.now() - startTime;
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      getGlobalMetrics().recordCall(
-        functionName,
-        duration,
-        false,
-        errorMessage,
-      );
     },
   };
 }
@@ -107,7 +75,7 @@ export function createRateLimitMiddleware<
 
 // Timeout middleware
 export function createTimeoutMiddleware<TArgs extends any[], TResult>(
-  timeoutMs: number,
+  _timeoutMs: number,
 ): Middleware<TArgs, TResult> {
   return {
     name: "timeout",
@@ -139,7 +107,7 @@ export function createValidationMiddleware<
       }
       return args;
     },
-    afterCall: async (result: TResult, args: TArgs) => {
+    afterCall: async (result: TResult, _args: TArgs) => {
       if (validateResult) {
         const validation = validateResult(result);
         if (validation !== true) {
@@ -200,9 +168,8 @@ export function createCircuitBreakerMiddleware<
 >(options: {
   failureThreshold: number;
   resetTimeoutMs: number;
-  monitorWindowMs?: number;
 }): Middleware<TArgs, TResult> {
-  const { failureThreshold, resetTimeoutMs, monitorWindowMs = 60000 } = options;
+  const { failureThreshold, resetTimeoutMs } = options;
   let state: "CLOSED" | "OPEN" | "HALF_OPEN" = "CLOSED";
   let failureCount = 0;
   let lastFailureTime = 0;
@@ -224,7 +191,7 @@ export function createCircuitBreakerMiddleware<
 
       return args;
     },
-    afterCall: async (result: TResult, args: TArgs) => {
+    afterCall: async (result: TResult, _args: TArgs) => {
       if (state === "HALF_OPEN") {
         successCount++;
         if (successCount >= 3) {
@@ -238,7 +205,7 @@ export function createCircuitBreakerMiddleware<
 
       return result;
     },
-    onError: async (error: any, args: TArgs) => {
+    onError: async (_error: any, _args: TArgs) => {
       failureCount++;
       lastFailureTime = Date.now();
 
@@ -267,7 +234,7 @@ export function createTransformMiddleware<
       }
       return args;
     },
-    afterCall: async (result: TResult, args: TArgs) => {
+    afterCall: async (result: TResult, _args: TArgs) => {
       if (transformResult) {
         return await transformResult(result);
       }
@@ -294,10 +261,6 @@ export function createCommonMiddleware<TArgs extends any[], TResult>(
   } = {},
 ): Middleware<TArgs, TResult>[] {
   const middlewares: Middleware<TArgs, TResult>[] = [];
-
-  if (options.enableMetrics !== false) {
-    middlewares.push(createMetricsMiddleware(functionName));
-  }
 
   if (options.enableLogging) {
     middlewares.push(createLoggingMiddleware({}));
