@@ -9,7 +9,7 @@ const subdomain = "staging.app"; // TODO SR: make this dynamic
 const isBatchingEnabled = false;
 
 let config: SDKConfig = {
-  apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
+  apiKey: "da9b7d98-0233-4ab8-a508-b4e79410dc12",
   apiUrl: `https://${subdomain}.olakai.ai/api/monitoring/prompt`, // needs to be set when we have an endpoint
   // apiKey: "2a382cdd-61b9-424f-94fb-9adeb33b903e",
   // apiUrl: `http://localhost:3000/api/monitoring/prompt`, // needs to be set when we have an endpoint
@@ -150,6 +150,7 @@ async function makeAPICall(
       headers: {
         "x-api-key": config.apiKey,
       },
+      // TODO SR: This is incorrect - the api payload does not support a batch property in the request body.
       body: JSON.stringify(
         Array.isArray(payload) ? { batch: payload } : payload,
       ),
