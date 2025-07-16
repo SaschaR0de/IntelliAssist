@@ -8,18 +8,17 @@ import type {
 import { initStorage, isStorageEnabled } from "./queue/storage/index";
 import { initQueueManager, QueueDependencies } from "./queue";
 import packageJson from "../package.json";
-const subdomain = "staging.app";
 const isBatchingEnabled = false;
 
 let config: SDKConfig = {
   apiKey: "",
-  domainUrl: `https://${subdomain}.olakai.ai`,
+  domainUrl: "",
   batchSize: 10,
   batchTimeout: 5000, // 5 seconds
   retries: 3,
   timeout: 20000, // 20 seconds
   enableStorage: true, // Whether to enable storage at all
-  storageType: 'auto', // Auto-detect best storage type
+  storageType: "auto", // Auto-detect best storage type
   storageKey: "olakai-sdk-queue", // Storage key/identifier
   maxStorageSize: 1000000, // Maximum storage size (1MB)
   onError: (_error: Error) => {},
@@ -31,13 +30,12 @@ let config: SDKConfig = {
 
 let isOnline = true; // Default to online for server environments
 
-
 // Setup online/offline detection for browser environments
 function initOnlineDetection() {
   if (typeof window !== "undefined" && typeof navigator !== "undefined") {
     // Browser environment - use navigator.onLine and window events
     isOnline = navigator.onLine;
-    
+
     window.addEventListener("online", () => {
       isOnline = true;
       // Queue manager will handle processing when online
@@ -57,15 +55,17 @@ function initOnlineDetection() {
  * @param keyOrConfig - The API key or configuration object
  */
 export async function initClient(
-  options: Partial<SDKConfig & {
-    apiKey?: string;
-    domainUrl?: string;
-    [key: string]: any;
-  }> = {}
+  options: Partial<
+    SDKConfig & {
+      apiKey?: string;
+      domainUrl?: string;
+      [key: string]: any;
+    }
+  > = {},
 ) {
   // Extract known parameters
   const { apiKey, domainUrl, ...restConfig } = options;
-  
+
   // Apply configuration in order of precedence
   if (apiKey) {
     config.apiKey = apiKey;
@@ -73,7 +73,7 @@ export async function initClient(
   if (domainUrl) {
     config.domainUrl = `${domainUrl}/api/monitoring/prompt`;
   }
-  
+
   // Apply any additional config properties
   if (Object.keys(restConfig).length > 0) {
     config = { ...config, ...restConfig };
@@ -89,16 +89,18 @@ export async function initClient(
   }
   // Initialize online detection
   initOnlineDetection();
-  
+
   // Initialize storage
-  const storageType = isStorageEnabled(config) ? config.storageType : 'disabled';
+  const storageType = isStorageEnabled(config)
+    ? config.storageType
+    : "disabled";
   initStorage(storageType, config.cacheDirectory);
 
   // Initialize queue manager with dependencies
   const queueDependencies: QueueDependencies = {
     config,
     isOnline: () => isOnline,
-    sendWithRetry: sendWithRetry
+    sendWithRetry: sendWithRetry,
   };
 
   const queueManager = initQueueManager(queueDependencies);
@@ -162,7 +164,7 @@ async function makeAPICall(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json() as Record<string, any>;
+    const result = (await response.json()) as Record<string, any>;
     return { success: true, ...result };
   } catch (err) {
     clearTimeout(timeoutId);
@@ -241,7 +243,7 @@ export async function sendToAPI(
   }
 
   if (isBatchingEnabled) {
-    const { addToQueue } = await import('./queue');
+    const { addToQueue } = await import("./queue");
     await addToQueue(payload, options);
   } else {
     await makeAPICall(payload);
@@ -249,7 +251,6 @@ export async function sendToAPI(
 }
 
 // Re-export queue utility functions
-
 
 /**
  * Make a control API call to check if execution should be allowed
@@ -267,9 +268,11 @@ async function makeControlAPICall(
     throw new Error("[Olakai SDK] API key is not set");
   }
 
-  const controlEndpoint = endpoint || config.domainUrl!.replace('/monitoring/prompt', '/control/check');
+  const controlEndpoint =
+    endpoint ||
+    config.domainUrl!.replace("/monitoring/prompt", "/control/check");
   const requestTimeout = timeout || config.timeout;
-  
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
@@ -294,13 +297,13 @@ async function makeControlAPICall(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json() as any;
-    
+    const result = (await response.json()) as any;
+
     // Ensure the response has the expected structure
-    if (typeof result.allowed !== 'boolean') {
+    if (typeof result.allowed !== "boolean") {
       throw new Error("Invalid control response: missing 'allowed' field");
     }
-    
+
     return result as ControlResponse;
   } catch (err) {
     clearTimeout(timeoutId);
@@ -332,7 +335,11 @@ export async function sendToControlAPI(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await makeControlAPICall(payload, options.endpoint, options.timeout);
+      const response = await makeControlAPICall(
+        payload,
+        options.endpoint,
+        options.timeout,
+      );
       return response;
     } catch (err) {
       lastError = err as Error;
@@ -357,7 +364,10 @@ export async function sendToControlAPI(
   }
 
   if (config.debug) {
-    console.error("[Olakai SDK] All control API retry attempts failed:", lastError);
+    console.error(
+      "[Olakai SDK] All control API retry attempts failed:",
+      lastError,
+    );
   }
 
   throw lastError;
