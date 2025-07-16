@@ -7,12 +7,14 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
 });
 
-initClient({
-  apiKey: "da9b7d98-0233-4ab8-a508-b4e79410dc12",
-  domainURL: "https://staging.app.olakai.ai",
-  debug: true,
-  verbose: true,
-});
+initClient(
+  "da9b7d98-0233-4ab8-a508-b4e79410dc12",
+  "https://staging.app.olakai.ai",
+  {
+    debug: true,
+    verbose: true,
+  }
+);
 
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
   task: "Support",
