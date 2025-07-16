@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { initClient, monitor } from "../../lib/api-sdk/index";
-import { initClient, monitor } from "../../lib/api-sdk/index";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -8,7 +7,12 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
 });
 
-initClient("da9b7d98-0233-4ab8-a508-b4e79410dc12");
+initClient({
+  apiKey: "da9b7d98-0233-4ab8-a508-b4e79410dc12",
+  apiURL: "https://staging.app.olakai.ai",
+  debug: true,
+  verbose: true,
+});
 
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
   task: "Support",
@@ -105,15 +109,7 @@ export interface ChatResponse {
 }
 
 export class OpenAIService {
-  constructor() {
-    initClient({
-      apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
-      apiURL: "https://staging.app.olakai.ai",
-      debug: true,
-      verbose: true,
-    });
-  }
-
+  
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
     const monitoredFunction = monitoredTicketAnalysis(
       async (content: string): Promise<TicketAnalysis> => {

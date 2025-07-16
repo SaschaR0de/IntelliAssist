@@ -1,6 +1,6 @@
 import { sendToAPI, sendToControlAPI, getConfig } from "./client";
 import type { MonitorOptions, ControlPayload, ControlResponse } from "./types";
-import type { Middleware } from "./middleware";
+import type { Middleware } from "./middleware/index";
 import { toApiString } from "./utils";
 
 // Global middleware registry
@@ -138,15 +138,7 @@ function sanitizeData(data: any, patterns?: RegExp[]): any {
       console.log("[Olakai SDK] Data successfully sanitized");
     }
     return parsed;
-    const parsed = JSON.parse(serialized);
-    if (getConfig().verbose) {
-      console.log("[Olakai SDK] Data successfully sanitized");
-    }
-    return parsed;
   } catch {
-    if (getConfig().debug) {
-      console.warn("[Olakai SDK] Data failed to sanitize");
-    }
     if (getConfig().debug) {
       console.warn("[Olakai SDK] Data failed to sanitize");
     }
@@ -211,7 +203,7 @@ function safeMonitoringOperation(
     // Call global error handler if configured
     if (config.onError) {
       try {
-        config.onError(error);
+        config.onError(error as Error);
       } catch (handlerError) {
         if (config.debug) {
           console.warn(
