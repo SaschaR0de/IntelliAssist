@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 initClient({
   apiKey: "da9b7d98-0233-4ab8-a508-b4e79410dc12",
-  apiURL: "https://staging.app.olakai.ai",
+  domainURL: "https://staging.app.olakai.ai",
   debug: true,
   verbose: true,
 });
@@ -109,7 +109,6 @@ export interface ChatResponse {
 }
 
 export class OpenAIService {
-  
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
     const monitoredFunction = monitoredTicketAnalysis(
       async (content: string): Promise<TicketAnalysis> => {
