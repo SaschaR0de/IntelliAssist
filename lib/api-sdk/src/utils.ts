@@ -48,10 +48,10 @@ export function validateConfig(config: Partial<SDKConfig>): string[] {
   }
 
   if (
-    config.maxLocalStorageSize !== undefined &&
-    config.maxLocalStorageSize <= 0
+    config.maxStorageSize !== undefined &&
+    config.maxStorageSize <= 0
   ) {
-    errors.push("Max local storage size must be positive");
+    errors.push("Max storage size must be positive");
   }
 
   return errors;
@@ -99,33 +99,6 @@ function isValidUrl(string: string): boolean {
   }
 }
 
-// Deep clone utility
-export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== "object") {
-    return obj;
-  }
-
-  if (obj instanceof Date) {
-    return new Date(obj.getTime()) as T;
-  }
-
-  if (obj instanceof Array) {
-    return obj.map((item) => deepClone(item)) as T;
-  }
-
-  if (typeof obj === "object") {
-    const cloned = {} as T;
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        cloned[key] = deepClone(obj[key]);
-      }
-    }
-    return cloned;
-  }
-
-  return obj;
-}
-
 // Generate unique ID
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -156,21 +129,6 @@ export function getEnvironment(): string {
   return "unknown";
 }
 
-// Check if localStorage is available
-export function isLocalStorageAvailable(): boolean {
-  try {
-    if (typeof localStorage === "undefined") {
-      return false;
-    }
-    const test = "__test__";
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // Create a configuration builder pattern
 export class ConfigBuilder {
   private config: Partial<SDKConfig> = {};
@@ -182,21 +140,6 @@ export class ConfigBuilder {
 
   apiUrl(url: string): ConfigBuilder {
     this.config.apiUrl = url;
-    return this;
-  }
-
-  environment(env: string): ConfigBuilder {
-    this.config.environment = env;
-    return this;
-  }
-
-  userId(id: string): ConfigBuilder {
-    this.config.userId = id;
-    return this;
-  }
-
-  chatId(id: string): ConfigBuilder {
-    this.config.chatId = id;
     return this;
   }
 
@@ -225,18 +168,18 @@ export class ConfigBuilder {
     return this;
   }
 
-  enableLocalStorage(enable: boolean = true): ConfigBuilder {
-    this.config.enableLocalStorage = enable;
+  enableStorage(enable: boolean = true): ConfigBuilder {
+    this.config.enableStorage = enable;
     return this;
   }
 
-  localStorageKey(key: string): ConfigBuilder {
-    this.config.localStorageKey = key;
+  storageKey(key: string): ConfigBuilder {
+    this.config.storageKey = key;
     return this;
   }
 
-  maxLocalStorageSize(size: number): ConfigBuilder {
-    this.config.maxLocalStorageSize = size;
+  maxStorageSize(size: number): ConfigBuilder {
+    this.config.maxStorageSize = size;
     return this;
   }
 
@@ -268,11 +211,13 @@ export class ConfigBuilder {
       batchTimeout: 5000,
       retries: 3,
       timeout: 10000,
-      enableLocalStorage: true,
-      localStorageKey: "olakai-sdk-queue",
-      maxLocalStorageSize: 1000000,
-      debug: false,
+      enableStorage: true,
+      storageKey: "olakai-sdk-queue",
+      maxStorageSize: 1000000,
+      onError: (_error: Error) => {},
       sanitizePatterns: DEFAULT_SANITIZE_PATTERNS,
+      debug: false,
+      verbose: false,
       ...this.config,
     } as SDKConfig;
   }
@@ -296,3 +241,13 @@ export function toApiString(val: any): string {
   return String(val);
 }
 
+/**
+ * Environment detection utilities
+ */
+export function isBrowser(): boolean {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+export function isNodeJS(): boolean {
+  return typeof process !== 'undefined' && process.versions && process.versions.node !== 'false';
+}

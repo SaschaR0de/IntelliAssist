@@ -1,27 +1,36 @@
-//TODO SR: See the exact API payload needed
 export type MonitorPayload = {
-  userId: string;
-  chatId: string;
-  name?: string;
+  userId?: string;
+  chatId?: string;
+  task?: string;
+  subTask?: string;
   prompt: string;
   response: string;
-  durationMs?: number;
-  timestamp?: string;
-  error?: boolean;
-  errorMessage?: string;
-  stackTrace?: string;
-  metadata?: Record<string, any>;
   tokens?: number;
   requestTime?: number;
-  environment?: string;
-  version?: string;
+  errorMessage?: string;
+};
+
+/**
+ * Configuration for control behavior
+ */
+export type ControlOptions<TArgs extends any[]> = {
+  enabled?: boolean | ((args: TArgs) => boolean);
+  endpoint?: string; // Optional separate endpoint for control checks
+  timeout?: number; // Timeout for the control API call
+  retries?: number; // Number of retries for failed control API calls
+  captureInput: (args: TArgs) => any; // Function to extract input for control check
+  onBlocked?: (args: TArgs, controlResponse: any) => void | never; // Handler when control blocks execution
+  onError?: (error: any, args: TArgs) => boolean; // Handler for control API errors, return true to allow execution
+  sanitize?: boolean; // Whether to sanitize input before sending to control API
+  priority?: "low" | "normal" | "high"; // Priority for control API calls
 };
 
 /**
  * Configuration for each monitored function
  */
 export type MonitorOptions<TArgs extends any[], TResult> = {
-  name: string;
+  task?: string;
+  subTask?: string;
   capture: (ctx: { args: TArgs; result: TResult }) => {
     input: any;
     output: any;
@@ -35,14 +44,19 @@ export type MonitorOptions<TArgs extends any[], TResult> = {
     output: any;
     metadata?: Record<string, any>;
   };
+  // Dynamic chat and user identification
+  chatId?: string | ((args: TArgs) => string);
+  userId?: string | ((args: TArgs) => string);
+  sanitize?: boolean; // Whether to sanitize sensitive data
+  priority?: "low" | "normal" | "high"; // Priority for batching
+  control?: ControlOptions<TArgs>; // Control configuration
   // May be deprecated if not needed
   enabled?: boolean | ((args: TArgs) => boolean);
   sampleRate?: number; // 0-1, percentage of calls to monitor
   timeout?: number; // Timeout for the API call
   retries?: number; // Number of retries for failed API calls
   tags?: Record<string, string>; // Additional tags for filtering
-  sanitize?: boolean; // Whether to sanitize sensitive data
-  priority?: "low" | "normal" | "high"; // Priority for batching
+
 };
 
 /**
@@ -50,21 +64,21 @@ export type MonitorOptions<TArgs extends any[], TResult> = {
  */
 export type SDKConfig = {
   apiKey: string;
-  apiUrl?: string;
-  environment?: string;
-  userId?: string;
-  chatId?: string;
-  version?: string;
-  batchSize?: number;
-  batchTimeout?: number;
-  retries?: number;
-  timeout?: number;
-  enableLocalStorage?: boolean;
-  localStorageKey?: string;
-  maxLocalStorageSize?: number;
-  debug?: boolean;
-  onError?: (error: Error) => void;
-  sanitizePatterns?: RegExp[];
+  apiUrl: string;
+  version: string;
+  batchSize: number;
+  batchTimeout: number;
+  retries: number;
+  timeout: number;
+  enableStorage: boolean; // Whether to enable storage at all
+  storageType: 'memory' | 'file' | 'auto'; // Type of storage to use
+  storageKey: string; // Storage key/identifier
+  maxStorageSize: number; // Maximum storage size in bytes
+  cacheDirectory?: string; // Custom cache directory for file storage (optional)  
+  onError: (error: Error) => void;
+  sanitizePatterns: RegExp[];
+  debug: boolean;
+  verbose: boolean;
 };
 
 export type BatchRequest = {
@@ -74,27 +88,19 @@ export type BatchRequest = {
   retries: number;
   priority: "low" | "normal" | "high";
 };
-// Don't know if there is one yet
+
 export type APIResponse = {
   success: boolean;
   message?: string;
   errors?: string[];
 };
 
-export type MetricsSnapshot = {
-  totalCalls: number;
-  successRate: number;
-  averageDuration: number;
-  errorRate: number;
-  lastError?: string;
-  lastErrorTime?: string;
+export type ControlPayload = {
+  input: any;
 };
 
-export type FilterFunction<TArgs extends any[]> = (args: TArgs) => boolean;
-
-export type Middleware<TArgs extends any[], TResult> = {
-  name: string;
-  beforeCall?: (args: TArgs) => TArgs | Promise<TArgs>;
-  afterCall?: (result: TResult, args: TArgs) => TResult | Promise<TResult>;
-  onError?: (error: any, args: TArgs) => void | Promise<void>;
+export type ControlResponse = {
+  allowed: boolean;
+  reason?: string;
+  metadata?: Record<string, any>;
 };

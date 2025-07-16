@@ -1,43 +1,32 @@
-export { monitor, addMiddleware, removeMiddleware } from "./monitor";
+export { monitor, addMiddleware, removeMiddleware } from "./src/monitor";
 export {
   initClient,
   getConfig,
-  getQueueSize,
-  clearQueue,
-  flushQueue,
-} from "./client";
-export * from "./types";
-
-// Re-export metrics
-export {
-  createMetricsCollector,
-  getGlobalMetrics,
-  MetricsCollector,
-} from "./metrics";
+} from "./src/client";
+export * from "./src/types";
+export { getQueueSize, clearQueue, flushQueue } from "./src/queue";
 
 // Re-export middleware
 export {
   createCommonMiddleware,
   createLoggingMiddleware,
-  createMetricsMiddleware,
   createRateLimitMiddleware,
   createValidationMiddleware,
   createCachingMiddleware,
   createCircuitBreakerMiddleware,
   createTransformMiddleware,
   createTimeoutMiddleware,
-} from "./middleware";
+  createCustomMiddleware,
+} from "./src/middleware/index";
 
 // Re-export utilities
 export {
   validateConfig,
   validateMonitorOptions,
-  deepClone,
   generateId,
   formatDuration,
   getEnvironment,
-  isLocalStorageAvailable,
   ConfigBuilder,
   createConfig,
   DEFAULT_SANITIZE_PATTERNS,
-} from "./utils";
+} from "./src/utils";

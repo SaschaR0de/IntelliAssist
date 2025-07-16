@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { initClient, monitor } from "../../lib/api-sdk/src/";
+import { initClient, monitor } from "../../lib/api-sdk/index";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -9,7 +9,8 @@ const openai = new OpenAI({
 
 
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
-  name: "ticket_analysis",
+  task: "Support",
+  subTask: "Ticket Analysis",
   capture: ({ args, result }) => ({
     input: args[0],
     output: result,
@@ -21,7 +22,8 @@ const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
 });
 
 const monitoredSummarizeDocument = monitor<[string, string], DocumentSummary>({
-  name: "summarize_document",
+  task: "QoF",
+  subTask: "Summarize Document",
   capture: ({ args, result }) => ({
     input: { content: args[0], filename: args[1] },
     output: result,
@@ -36,7 +38,8 @@ const monitoredDraftResponse = monitor<
   [string, string, string?],
   ResponseDraft
 >({
-  name: "draft_response",
+  task: "Support",
+  subTask: "Draft Response",
   capture: ({ args, result }) => ({
     input: { ticketContent: args[0], context: args[1], template: args[2] },
     output: result,
@@ -48,7 +51,8 @@ const monitoredDraftResponse = monitor<
 });
 
 const monitoredSearchKnowledge = monitor<[string, any[]], SearchResult[]>({
-  name: "search_knowledge",
+  task: "Learning",
+  subTask: "Search Knowledge",
   capture: ({ args, result }) => ({
     input: { query: args[0], documentsCount: args[1].length },
     output: result,
@@ -101,7 +105,12 @@ export interface ChatResponse {
 export class OpenAIService {
 
   constructor() {
-    initClient("0db92d0c-a8e5-47a4-befb-bbb48d2f6c86");
+    initClient({
+      apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
+      apiURL: "https://staging.app.olakai.ai",
+      debug: true,
+      verbose: true,
+    });
   }
 
   async analyzeTicket(content: string): Promise<TicketAnalysis> {

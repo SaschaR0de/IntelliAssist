@@ -1,5 +1,7 @@
-import { sendToAPI, getConfig } from "./client";
-import type { MonitorOptions, Middleware } from "./types";
+import { sendToAPI, sendToControlAPI, getConfig } from "./client";
+import type { MonitorOptions, ControlPayload, ControlResponse } from "./types";
+import type { Middleware } from "./middleware";
+import { toApiString } from "./utils";
 
 // Global middleware registry
 const middlewares: Middleware<any, any>[] = [];
@@ -29,7 +31,6 @@ function shouldMonitor<TArgs extends any[]>(
   if (typeof options.enabled === "function" && !options.enabled(args)) {
     return false;
   }
-
   // Check sample rate
   if (options.sampleRate !== undefined && Math.random() > options.sampleRate) {
     return false;
@@ -38,8 +39,85 @@ function shouldMonitor<TArgs extends any[]>(
   return true;
 }
 
-//TODO XC : See if we need this
-//TODO SR : See if we need this
+async function shouldControl<TArgs extends any[]>(
+  options: MonitorOptions<TArgs, any>,
+  args: TArgs,
+): Promise<boolean> {
+  const controlOptions = options.control;
+  
+  // If control is not configured, allow execution
+  if (!controlOptions) {
+    return false;
+  }
+  
+  // Check if control is enabled
+  if (typeof controlOptions.enabled === "boolean" && !controlOptions.enabled) {
+    return false;
+  }
+  if (typeof controlOptions.enabled === "function" && !controlOptions.enabled(args)) {
+    return false;
+  }
+  
+  try {
+    const config = getConfig();
+    
+    // Prepare input for control check
+    const input = controlOptions.captureInput(args);
+    
+    // Sanitize input if required
+    const sanitizedInput = controlOptions.sanitize 
+      ? sanitizeData(input, config.sanitizePatterns)
+      : input;
+    
+    // Create control payload
+    const payload: ControlPayload = {
+      input: sanitizedInput,
+    };
+    
+    // Send control request
+    const response: ControlResponse = await sendToControlAPI(payload, {
+      endpoint: controlOptions.endpoint,
+      retries: controlOptions.retries,
+      timeout: controlOptions.timeout,
+      priority: controlOptions.priority,
+    });
+    
+    if (config.verbose) {
+      console.log("[Olakai SDK] Control response:", response);
+    }
+    
+    // If not allowed, handle the blocking
+    if (!response.allowed) {
+      if (controlOptions.onBlocked) {
+        // Let the developer handle the blocking
+        controlOptions.onBlocked(args, response);
+        // If onBlocked doesn't throw, we assume execution should be blocked
+        return true;
+      } else {
+        // Default behavior: throw an error
+        throw new Error(`Function execution blocked: ${response.reason || 'No reason provided'}`);
+      }
+    }
+    
+    return false; // Allow execution
+    
+  } catch (error) {
+    if (controlOptions.onError) {
+      // Let the developer decide what to do on error
+      const shouldAllow = controlOptions.onError(error, args);
+      if (shouldAllow) {
+        if (getConfig().verbose) {
+          console.log("[Olakai SDK] Control error handled, allowing execution");
+        }
+        return false; // Allow execution
+      }
+    }
+    
+    // If no error handler or it returns false, re-throw the error
+    throw error;
+  }
+}
+
 /**
  * Sanitize data by replacing sensitive information with a placeholder
  * @param data - The data to sanitize
@@ -55,8 +133,15 @@ function sanitizeData(data: any, patterns?: RegExp[]): any {
   });
 
   try {
-    return JSON.parse(serialized);
+    const parsed = JSON.parse(serialized);
+    if (getConfig().verbose) {
+      console.log("[Olakai SDK] Data successfully sanitized");
+    }
+    return parsed;
   } catch {
+    if (getConfig().debug) {
+      console.warn("[Olakai SDK] Data failed to sanitize");
+    }
     return "[SANITIZED]";
   }
 }
@@ -132,6 +217,28 @@ function safeMonitoringOperation(
 }
 
 /**
+ * Resolve dynamic chatId and userId from options
+ * @param options - Monitor options
+ * @param args - Function arguments
+ * @returns Object with resolved chatId and userId
+ */
+function resolveIdentifiers<TArgs extends any[]>(
+  options: MonitorOptions<TArgs, any>,
+  args: TArgs,
+): { chatId: string; userId: string } {
+  const chatId = typeof options.chatId === "function" 
+    ? options.chatId(args) 
+    : options.chatId || "123";
+  
+  const userId = typeof options.userId === "function"
+    ? options.userId(args)
+    : options.userId || "anonymous";
+    
+  return { chatId, userId };
+}
+
+//TODO : Add a way to pass in a custom tasks/subtasks in the payload
+/**
  * Monitor a function
  * @param options - The options for the monitored function
  * @param fn - The function to monitor
@@ -165,7 +272,8 @@ export function monitor<TArgs extends any[], TResult>(
   const options = arg1 as MonitorOptions<TArgs, TResult>;
   return (fn: (...args: TArgs) => Promise<TResult>) => {
     return async (...args: TArgs): Promise<TResult> => {
-      // Check if we should monitor this call - if not, just execute the function
+
+      //========== Check if we should monitor this call - if not, just execute the function
       let shouldMonitorCall = false;
       try {
         shouldMonitorCall = shouldMonitor(options, args);
@@ -176,29 +284,47 @@ export function monitor<TArgs extends any[], TResult>(
         // If monitoring check fails, still execute the function
         return fn(...args);
       }
+      //========== End of shouldMonitor check
 
+      //========== If we should not monitor, execute the function
       if (!shouldMonitorCall) {
         return fn(...args);
       }
 
+      //========== If we should monitor, initialize monitoring data
       let config: any;
       let start: number;
-      let callId: string;
       let processedArgs = args;
 
       // Safely initialize monitoring data
       try {
         config = getConfig();
         start = Date.now();
-        callId = `${options.name}-${start}-${Math.random()
-          .toString(36)
-          .substr(2, 9)}`;
       } catch (error) {
         safeMonitoringOperation(() => {
           throw error;
         }, "monitoring initialization");
         // If monitoring setup fails, still execute the function
         return fn(...args);
+      }
+      //========== End of monitoring initialization
+
+      //========== Check if we should control this call
+      let shouldControlCall = false;
+      try {
+        shouldControlCall = await shouldControl(options, args);
+      } catch (error) {
+        // If shouldControl throws an error, it means execution was blocked
+        // We should re-throw this error to prevent function execution
+        throw error;
+      }
+      //========== End of shouldControl check
+
+      //========== If we should control (block execution), return early
+      if (shouldControlCall) {
+        // This should not happen in normal flow as shouldControl throws on block
+        // But kept for safety
+        throw new Error("Function execution blocked by control logic");
       }
 
       // Safely apply beforeCall middleware
@@ -239,28 +365,16 @@ export function monitor<TArgs extends any[], TResult>(
               const errorResult = options.onError(functionError, processedArgs);
               const errorInfo = createErrorInfo(functionError);
 
+              const { chatId, userId } = resolveIdentifiers(options, args);
+
               const payload = {
-                name: options.name,
-                prompt: options.sanitize
-                  ? sanitizeData(errorResult.input, config.sanitizePatterns)
-                  : errorResult.input,
-                response: options.sanitize
-                  ? sanitizeData(errorResult.output, config.sanitizePatterns)
-                  : errorResult.output,
-                error: true,
-                ...errorInfo,
-                durationMs: Date.now() - start,
-                timestamp: new Date().toISOString(),
-                metadata: {
-                  ...errorResult.metadata,
-                  callId,
-                  tags: options.tags,
-                  priority: options.priority || "high", // Errors get higher priority
-                },
-                chatId: config.chatId,
-                userId: config.userId,
-                environment: config.environment,
-                version: config.version,
+                prompt: "",
+                response: "",
+                errorMessage:
+                  toApiString(errorInfo.errorMessage) +
+                  toApiString(errorResult),
+                chatId: toApiString(chatId),
+                userId: toApiString(userId),
               };
 
               await sendToAPI(payload, {
@@ -291,28 +405,29 @@ export function monitor<TArgs extends any[], TResult>(
               args: processedArgs,
               result,
             });
+            const prompt = options.sanitize
+              ? sanitizeData(captureResult.input, config.sanitizePatterns)
+              : captureResult.input;
+            const response = options.sanitize
+              ? sanitizeData(captureResult.output, config.sanitizePatterns)
+              : captureResult.output;
+
+            const { chatId, userId } = resolveIdentifiers(options, args);
 
             const payload = {
-              name: options.name,
-              prompt: options.sanitize
-                ? sanitizeData(captureResult.input, config.sanitizePatterns)
-                : captureResult.input,
-              response: options.sanitize
-                ? sanitizeData(captureResult.output, config.sanitizePatterns)
-                : captureResult.output,
-              durationMs: Date.now() - start,
-              timestamp: new Date().toISOString(),
-              metadata: {
-                ...captureResult.metadata,
-                callId,
-                tags: options.tags,
-                priority: options.priority || "normal",
-              },
-              chatId: config.chatId,
-              userId: config.userId,
-              environment: config.environment,
-              version: config.version,
+              prompt: toApiString(prompt),
+              response: toApiString(response),
+              chatId: toApiString(chatId),
+              userId: toApiString(userId),
+              tokens: 0,
+              requestTime: Number(Date.now() - start),
+              ...(options.task !== undefined ? { task: options.task } : {}),
+              ...(options.subTask !== undefined ? { subTask: options.subTask } : {}),
             };
+
+            if (config.verbose) {
+              console.log("[Olakai SDK] Successfully defined payload", payload);
+            }
 
             // Send to API (with batching and retry logic handled in client)
             await sendToAPI(payload, {
@@ -323,8 +438,8 @@ export function monitor<TArgs extends any[], TResult>(
           }, "success monitoring");
         }
       }
-
-      return result!; // We know result is defined if we get here (no function error)
+      //========== End of monitoring operations
+      return result; // We know result is defined if we get here (no function error)
     };
   };
 }
