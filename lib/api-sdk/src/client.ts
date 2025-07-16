@@ -57,8 +57,6 @@ function initOnlineDetection() {
 export async function initClient(
   options: Partial<
     SDKConfig & {
-      apiKey?: string;
-      domainUrl?: string;
       [key: string]: any;
     }
   > = {},
