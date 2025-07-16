@@ -24,17 +24,6 @@ export type ControlOptions<TArgs extends any[]> = {
   sanitize?: boolean; // Whether to sanitize input before sending to control API
   priority?: "low" | "normal" | "high"; // Priority for control API calls
 };
-*/
-
-export type MonitorPayload = {
-  userId: string;
-  chatId: string;
-  prompt: string;
-  response: string;
-  tokens?: number;
-  requestTime?: number;
-  errorMessage?: string;
-};
 
 /**
  * Configuration for each monitored function
