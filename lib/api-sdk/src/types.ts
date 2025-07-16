@@ -56,6 +56,7 @@ export type MonitorOptions<TArgs extends any[], TResult> = {
   timeout?: number; // Timeout for the API call
   retries?: number; // Number of retries for failed API calls
   tags?: Record<string, string>; // Additional tags for filtering
+
 };
 
 /**
@@ -70,10 +71,10 @@ export type SDKConfig = {
   retries: number;
   timeout: number;
   enableStorage: boolean; // Whether to enable storage at all
-  storageType: "memory" | "file" | "auto"; // Type of storage to use
+  storageType: 'memory' | 'file' | 'auto'; // Type of storage to use
   storageKey: string; // Storage key/identifier
   maxStorageSize: number; // Maximum storage size in bytes
-  cacheDirectory?: string; // Custom cache directory for file storage (optional)
+  cacheDirectory?: string; // Custom cache directory for file storage (optional)  
   onError: (error: Error) => void;
   sanitizePatterns: RegExp[];
   debug: boolean;
