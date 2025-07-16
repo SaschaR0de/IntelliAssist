@@ -2,9 +2,11 @@ export { monitor, addMiddleware, removeMiddleware } from "./src/monitor";
 export {
   initClient,
   getConfig,
+
 } from "./src/client";
 export * from "./src/types";
 export { getQueueSize, clearQueue, flushQueue } from "./src/queue";
+
 
 // Re-export middleware
 export {
@@ -16,8 +18,10 @@ export {
   createCircuitBreakerMiddleware,
   createTransformMiddleware,
   createTimeoutMiddleware,
+
   createCustomMiddleware,
 } from "./src/middleware/index";
+
 
 // Re-export utilities
 export {

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { initClient, monitor } from "../../lib/api-sdk/index";
+import { initClient, monitor } from "../../lib/api-sdk/index";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -7,6 +8,7 @@ const openai = new OpenAI({
     process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "",
 });
 
+initClient("da9b7d98-0233-4ab8-a508-b4e79410dc12");
 
 const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
   task: "Support",
@@ -103,7 +105,6 @@ export interface ChatResponse {
 }
 
 export class OpenAIService {
-
   constructor() {
     initClient({
       apiKey: "0db92d0c-a8e5-47a4-befb-bbb48d2f6c86",
@@ -150,7 +151,7 @@ export class OpenAIService {
           const analysis = JSON.parse(
             response.choices[0].message.content || "{}",
           );
-          
+
           const result = {
             summary: analysis.summary || "Unable to analyze ticket",
             priority: analysis.priority || "medium",
@@ -161,7 +162,6 @@ export class OpenAIService {
             estimatedResolutionTime:
               analysis.estimatedResolutionTime || "1-2 days",
           };
-
 
           return result;
         } catch (error) {
@@ -439,7 +439,7 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
     userMessage: string,
     conversationHistory: { role: string; content: string }[] = [],
     documents: any[] = [],
-    tickets: any[] = []
+    tickets: any[] = [],
   ): Promise<ChatResponse> {
     if (!openai.apiKey) {
       throw new Error("OpenAI API key not configured");
@@ -447,30 +447,38 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
 
     try {
       // Search for relevant documents and tickets
-      const relevantDocs = documents.filter(doc => 
-        doc.content.toLowerCase().includes(userMessage.toLowerCase()) ||
-        doc.title.toLowerCase().includes(userMessage.toLowerCase()) ||
-        doc.aiSummary?.toLowerCase().includes(userMessage.toLowerCase())
-      ).slice(0, 3);
+      const relevantDocs = documents
+        .filter(
+          (doc) =>
+            doc.content.toLowerCase().includes(userMessage.toLowerCase()) ||
+            doc.title.toLowerCase().includes(userMessage.toLowerCase()) ||
+            doc.aiSummary?.toLowerCase().includes(userMessage.toLowerCase()),
+        )
+        .slice(0, 3);
 
-      const relevantTickets = tickets.filter(ticket => 
-        ticket.title.toLowerCase().includes(userMessage.toLowerCase()) ||
-        ticket.description.toLowerCase().includes(userMessage.toLowerCase()) ||
-        ticket.aiSummary?.toLowerCase().includes(userMessage.toLowerCase())
-      ).slice(0, 3);
+      const relevantTickets = tickets
+        .filter(
+          (ticket) =>
+            ticket.title.toLowerCase().includes(userMessage.toLowerCase()) ||
+            ticket.description
+              .toLowerCase()
+              .includes(userMessage.toLowerCase()) ||
+            ticket.aiSummary?.toLowerCase().includes(userMessage.toLowerCase()),
+        )
+        .slice(0, 3);
 
       // Build context from relevant documents and tickets
       let contextInfo = "";
       if (relevantDocs.length > 0) {
         contextInfo += "\n\nRelevant Documentation:\n";
-        relevantDocs.forEach(doc => {
+        relevantDocs.forEach((doc) => {
           contextInfo += `- ${doc.title}: ${doc.aiSummary || doc.content.substring(0, 200)}...\n`;
         });
       }
 
       if (relevantTickets.length > 0) {
         contextInfo += "\n\nRelevant Tickets:\n";
-        relevantTickets.forEach(ticket => {
+        relevantTickets.forEach((ticket) => {
           contextInfo += `- ${ticket.title} (${ticket.priority}): ${ticket.aiSummary || ticket.description.substring(0, 200)}...\n`;
         });
       }
@@ -498,55 +506,59 @@ Tags: ${doc.tags?.join(", ") || "No tags"}
           Available context:${contextInfo}
           
           If you need to perform an action (like creating a ticket, searching documents, etc.), 
-          mention this in your response and indicate what action would be helpful.`
+          mention this in your response and indicate what action would be helpful.`,
         },
         ...conversationHistory,
         {
           role: "user",
-          content: userMessage
-        }
+          content: userMessage,
+        },
       ];
 
       const requestPayload = {
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages,
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 1000,
       };
 
       // Fix: Ensure messages are typed correctly for OpenAI API
       const response = await openai.chat.completions.create({
         ...requestPayload,
-        messages: messages as import("openai/resources/chat").ChatCompletionMessageParam[]
+        messages:
+          messages as import("openai/resources/chat").ChatCompletionMessageParam[],
       });
-      const botResponse = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
-      
+      const botResponse =
+        response.choices[0]?.message?.content ||
+        "I'm sorry, I couldn't generate a response.";
+
       // Calculate confidence based on context relevance and response quality
       const confidence = Math.min(
         0.95,
-        0.6 + 
-        (relevantDocs.length > 0 ? 0.2 : 0) + 
-        (relevantTickets.length > 0 ? 0.1 : 0) + 
-        (botResponse.length > 50 ? 0.05 : 0)
+        0.6 +
+          (relevantDocs.length > 0 ? 0.2 : 0) +
+          (relevantTickets.length > 0 ? 0.1 : 0) +
+          (botResponse.length > 50 ? 0.05 : 0),
       );
 
       // Extract sources
       const sources = [
-        ...relevantDocs.map(doc => doc.title),
-        ...relevantTickets.map(ticket => ticket.title)
+        ...relevantDocs.map((doc) => doc.title),
+        ...relevantTickets.map((ticket) => ticket.title),
       ];
 
       // Check if bot suggests any actions
-      const suggestsAction = botResponse.toLowerCase().includes('create') || 
-                           botResponse.toLowerCase().includes('escalate') ||
-                           botResponse.toLowerCase().includes('search') ||
-                           botResponse.toLowerCase().includes('update');
+      const suggestsAction =
+        botResponse.toLowerCase().includes("create") ||
+        botResponse.toLowerCase().includes("escalate") ||
+        botResponse.toLowerCase().includes("search") ||
+        botResponse.toLowerCase().includes("update");
 
       const result: ChatResponse = {
         response: botResponse,
         confidence,
         sources,
-        actionTaken: suggestsAction ? "action_suggested" : undefined
+        actionTaken: suggestsAction ? "action_suggested" : undefined,
       };
 
       return result;

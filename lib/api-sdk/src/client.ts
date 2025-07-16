@@ -123,6 +123,9 @@ async function sleep(ms: number): Promise<void> {
   if (config.verbose) {
     console.log("[Olakai SDK] Sleeping for", ms, "ms");
   }
+  if (config.verbose) {
+    console.log("[Olakai SDK] Sleeping for", ms, "ms");
+  }
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -147,11 +150,17 @@ async function makeAPICall(
       headers: {
         "x-api-key": config.apiKey,
       },
+      // TODO SR: This is incorrect - the api payload does not support a batch property in the request body.
       body: JSON.stringify(
         Array.isArray(payload) ? { batch: payload } : payload,
       ),
       signal: controller.signal,
     });
+
+    if (config.verbose) {
+      console.log("[Olakai SDK] API response:", response);
+    }
+
 
     if (config.verbose) {
       console.log("[Olakai SDK] API response:", response);
