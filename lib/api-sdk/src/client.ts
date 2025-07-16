@@ -71,7 +71,7 @@ export async function initClient(
     config.apiKey = apiKey;
   }
   if (domainUrl) {
-    config.domainUrl = domainUrl;
+    config.domainUrl = `${domainUrl}/api/monitoring/prompt`;
   }
   
   // Apply any additional config properties
@@ -84,7 +84,6 @@ export async function initClient(
   if (!config.apiKey) {
     throw new Error("[Olakai SDK] API key is not set");
   }
-  config.domainUrl = `${config.domainUrl}/api/monitoring/prompt`;
   if (config.verbose) {
     console.log("[Olakai SDK] Config:", config);
   }
@@ -123,9 +122,6 @@ async function sleep(ms: number): Promise<void> {
   if (config.verbose) {
     console.log("[Olakai SDK] Sleeping for", ms, "ms");
   }
-  if (config.verbose) {
-    console.log("[Olakai SDK] Sleeping for", ms, "ms");
-  }
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -150,17 +146,11 @@ async function makeAPICall(
       headers: {
         "x-api-key": config.apiKey,
       },
-      // TODO SR: This is incorrect - the api payload does not support a batch property in the request body.
       body: JSON.stringify(
         Array.isArray(payload) ? { batch: payload } : payload,
       ),
       signal: controller.signal,
     });
-
-    if (config.verbose) {
-      console.log("[Olakai SDK] API response:", response);
-    }
-
 
     if (config.verbose) {
       console.log("[Olakai SDK] API response:", response);
