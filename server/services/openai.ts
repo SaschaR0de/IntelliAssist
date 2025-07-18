@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { initClient, monitor } from "../../lib/api-sdk/index";
+import { initClient, olakaiMonitor } from "olakai-sdk";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -13,63 +13,8 @@ initClient(
   {
     debug: true,
     verbose: true,
-  }
+  },
 );
-
-const monitoredTicketAnalysis = monitor<[string], TicketAnalysis>({
-  task: "Support",
-  subTask: "Ticket Analysis",
-  capture: ({ args, result }) => ({
-    input: args[0],
-    output: result,
-  }),
-  onError: (error, args) => ({
-    input: { content: args[0] },
-    output: { error: error.message },
-  }),
-});
-
-const monitoredSummarizeDocument = monitor<[string, string], DocumentSummary>({
-  task: "QoF",
-  subTask: "Summarize Document",
-  capture: ({ args, result }) => ({
-    input: { content: args[0], filename: args[1] },
-    output: result,
-  }),
-  onError: (error, args) => ({
-    input: { content: args[0], filename: args[1] },
-    output: { error: error.message },
-  }),
-});
-
-const monitoredDraftResponse = monitor<
-  [string, string, string?],
-  ResponseDraft
->({
-  task: "Support",
-  subTask: "Draft Response",
-  capture: ({ args, result }) => ({
-    input: { ticketContent: args[0], context: args[1], template: args[2] },
-    output: result,
-  }),
-  onError: (error, args) => ({
-    input: { ticketContent: args[0], context: args[1], template: args[2] },
-    output: { error: error.message },
-  }),
-});
-
-const monitoredSearchKnowledge = monitor<[string, any[]], SearchResult[]>({
-  task: "Learning",
-  subTask: "Search Knowledge",
-  capture: ({ args, result }) => ({
-    input: { query: args[0], documentsCount: args[1].length },
-    output: result,
-  }),
-  onError: (error, args) => ({
-    input: { query: args[0], documentsCount: args[1].length },
-    output: { error: error.message },
-  }),
-});
 
 export interface TicketAnalysis {
   summary: string;
@@ -112,7 +57,7 @@ export interface ChatResponse {
 
 export class OpenAIService {
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
-    const monitoredFunction = monitoredTicketAnalysis(
+    const monitoredFunction = olakaiMonitor(
       async (content: string): Promise<TicketAnalysis> => {
         if (!openai.apiKey) {
           throw new Error("OpenAI API key not configured");
@@ -166,8 +111,6 @@ export class OpenAIService {
         }
       },
     );
-
-    return monitoredFunction(content);
   }
 
   async summarizeDocument(
