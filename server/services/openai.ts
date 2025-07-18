@@ -57,13 +57,13 @@ export interface ChatResponse {
 
 export class OpenAIService {
   async analyzeTicket(content: string): Promise<TicketAnalysis> {
-    const monitoredFunction = olakaiMonitor(
-      async (content: string): Promise<TicketAnalysis> => {
         if (!openai.apiKey) {
           throw new Error("OpenAI API key not configured");
         }
 
         try {
+          const monitoredFunction = olakaiMonitor(
+            async (content: string): Promise<TicketAnalysis> => {
           const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
@@ -106,18 +106,19 @@ export class OpenAIService {
           };
 
           return result;
-        } catch (error) {
-          throw new Error(`Failed to analyze ticket: ${error}`);
-        }
-      },
-    );
-  }
+        },
+      );
+      return monitoredFunction(content);
+    } catch (error) {
+      throw new Error(`Failed to analyze ticket: ${error}`);
+    }
+      }
 
   async summarizeDocument(
     content: string,
     filename: string,
   ): Promise<DocumentSummary> {
-    const monitoredFunction = monitoredSummarizeDocument(
+    const monitoredFunction = olakaiMonitor(
       async (content: string, filename: string): Promise<DocumentSummary> => {
         if (!openai.apiKey) {
           throw new Error("OpenAI API key not configured");
@@ -209,7 +210,7 @@ export class OpenAIService {
     context: string,
     template?: string,
   ): Promise<ResponseDraft> {
-    const monitoredFunction = monitoredDraftResponse(
+    const monitoredFunction = olakaiMonitor(
       async (
         ticketContent: string,
         context: string,
@@ -273,7 +274,7 @@ export class OpenAIService {
     query: string,
     documents: any[],
   ): Promise<SearchResult[]> {
-    const monitoredFunction = monitoredSearchKnowledge(
+    const monitoredFunction = olakaiMonitor(
       async (query: string, documents: any[]): Promise<SearchResult[]> => {
         if (!openai.apiKey) {
           throw new Error("OpenAI API key not configured");
